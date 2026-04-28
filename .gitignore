@@ -1,0 +1,32 @@
+# Dependencias
+node_modules/
+*/node_modules/
+
+# Variables de entorno (nunca subir al repo)
+.env
+.env.local
+.env.production
+frontend/.env
+frontend/.env.local
+backend/.env
+
+# Build del frontend
+frontend/build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Railway / deployment
+.railway/
+
+# Claude Code
+.claude/
