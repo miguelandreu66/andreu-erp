@@ -16,6 +16,8 @@ import Mantenimiento from './pages/Mantenimiento';
 import CXC from './pages/CXC';
 import Compras from './pages/Compras';
 import Logistica from './pages/Logistica';
+import Cotizaciones from './pages/Cotizaciones';
+import RegistroMovil from './pages/RegistroMovil';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -46,6 +48,8 @@ export default function App() {
             <Route path="logistica" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Logistica /></PrivateRoute>} />
             <Route path="historicos" element={<PrivateRoute roles={['director','admin','monitoreo']}><Historicos /></PrivateRoute>} />
             <Route path="mantenimiento" element={<PrivateRoute roles={['director','admin','logistica']}><Mantenimiento /></PrivateRoute>} />
+            <Route path="cotizaciones" element={<PrivateRoute roles={['director','admin','caja']}><Cotizaciones /></PrivateRoute>} />
+            <Route path="registro-movil" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><RegistroMovil /></PrivateRoute>} />
             <Route path="reportes" element={<Reportes />} />
             <Route path="configuracion" element={<PrivateRoute roles={['director','admin']}><Configuracion /></PrivateRoute>} />
           </Route>

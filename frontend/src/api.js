@@ -138,7 +138,15 @@ export const api = {
   enviarReporteDia: (telefono) => req('POST', '/notificaciones/reporte-dia', { telefono }),
   configNotificaciones: () => req('GET', '/notificaciones/config'),
 
-  crearOperador: (body) => req('POST', '/operadores', body),
+  // Cotizaciones
+  cotizaciones:              (params='') => req('GET',  `/cotizaciones${params}`),
+  detalleCotizacion:         (id)        => req('GET',  `/cotizaciones/${id}`),
+  crearCotizacion:           (body)      => req('POST', '/cotizaciones', body),
+  actualizarEstadoCotizacion:(id, estado)=> req('PUT',  `/cotizaciones/${id}/estado`, { estado }),
+  convertirCotizacion:       (id, body)  => req('POST', `/cotizaciones/${id}/convertir`, body),
+
+  operadores:         ()         => req('GET',  '/operadores'),
+  crearOperador:      (body)     => req('POST', '/operadores', body),
   actualizarOperador: (id, body) => req('PUT', `/operadores/${id}`, body),
   toggleOperador: (id) => req('PUT', `/operadores/${id}/toggle`),
 };
