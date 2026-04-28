@@ -1,0 +1,8 @@
+{
+  "short_name": "Andreu ERP",
+  "name": "Grupo Andreu — Sistema ERP",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#1B3A6B",
+  "background_color": "#ffffff"
+}
