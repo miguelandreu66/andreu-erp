@@ -159,10 +159,12 @@ export default function CXC() {
   const [antiguedad, setAntiguedad] = useState([]);
   const [loading,    setLoading]    = useState(true);
 
-  const [modalAbono,     setModalAbono]     = useState(null);
-  const [modalHistorial, setModalHistorial] = useState(null);
-  const [filtroCliente,  setFiltroCliente]  = useState('');
-  const [soloVencidas,   setSoloVencidas]   = useState(false);
+  const [modalAbono,       setModalAbono]       = useState(null);
+  const [modalHistorial,   setModalHistorial]   = useState(null);
+  const [filtroCliente,    setFiltroCliente]    = useState('');
+  const [soloVencidas,     setSoloVencidas]     = useState(false);
+  const [enviandoWA,       setEnviandoWA]       = useState(false);
+  const [resultadoWA,      setResultadoWA]      = useState(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -196,12 +198,50 @@ export default function CXC() {
     cargar();
   };
 
+  const enviarRecordatorios = async () => {
+    if (!window.confirm('¿Enviar recordatorio por WhatsApp a todos los clientes con saldo vencido (+30 días)?')) return;
+    setEnviandoWA(true);
+    setResultadoWA(null);
+    try {
+      const r = await api.recordatoriosCXC();
+      setResultadoWA(r);
+    } catch (e) {
+      setResultadoWA({ ok: false, error: e.message });
+    } finally {
+      setEnviandoWA(false);
+    }
+  };
+
   return (
     <div>
-      <div className="page-header">
-        <h2>Cuentas por Cobrar (CXC)</h2>
-        <p>Control de créditos, antigüedad de saldos y abonos</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <h2>Cuentas por Cobrar (CXC)</h2>
+          <p>Control de créditos, antigüedad de saldos y abonos</p>
+        </div>
+        <button
+          className="btn btn-orange"
+          onClick={enviarRecordatorios}
+          disabled={enviandoWA}
+          title="Enviar WhatsApp a clientes con saldo vencido +30 días"
+        >
+          {enviandoWA ? 'Enviando...' : '📱 Recordatorios WhatsApp'}
+        </button>
       </div>
+
+      {resultadoWA && (
+        <div className={`alert ${resultadoWA.ok ? 'green' : 'red'}`} style={{ marginBottom: 12 }}>
+          <div className="alert-dot" />
+          <div>
+            {resultadoWA.ok
+              ? `✅ ${resultadoWA.enviados} mensaje(s) enviado(s) de ${resultadoWA.total_clientes} cliente(s) con saldo vencido.` +
+                (resultadoWA.sin_telefono > 0 ? ` ${resultadoWA.sin_telefono} cuenta(s) sin teléfono registrado.` : '') +
+                (resultadoWA.sin_twilio ? ' (Twilio no configurado — mensajes simulados en log)' : '')
+              : `Error: ${resultadoWA.error}`
+            }
+          </div>
+        </div>
+      )}
 
       {/* Tarjetas de resumen */}
       {resumen && (

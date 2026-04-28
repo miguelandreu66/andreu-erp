@@ -136,6 +136,74 @@ router.get('/', auth(), async (req, res) => {
   }
 });
 
+// POST /recordatorios — enviar WhatsApp a clientes con saldo vencido
+router.post('/recordatorios', auth(['director','admin']), async (req, res) => {
+  const { enviarWhatsApp } = require('./notificaciones');
+  try {
+    // Obtener cuentas vencidas agrupadas por cliente
+    const { rows } = await db.query(`
+      SELECT
+        c.nombre      AS cliente_nombre,
+        c.telefono    AS cliente_telefono,
+        COALESCE(v.total, v.monto) - COALESCE(SUM(a.monto), 0) AS saldo_pendiente,
+        CURRENT_DATE - COALESCE(v.fecha_vencimiento, v.fecha)  AS dias_transcurridos
+      FROM ventas v
+      LEFT JOIN clientes c ON v.cliente_id = c.id
+      LEFT JOIN abonos   a ON v.id          = a.venta_id
+      WHERE v.estado_pago IN ('pendiente','parcial')
+      GROUP BY v.id, c.nombre, c.telefono, v.fecha, v.fecha_vencimiento
+      HAVING
+        (COALESCE(v.total, v.monto) - COALESCE(SUM(a.monto), 0)) > 0
+        AND CURRENT_DATE - COALESCE(v.fecha_vencimiento, v.fecha) > 30
+    `);
+
+    // Agrupar por teléfono de cliente
+    const mapa = {};
+    let sinTelefono = 0;
+    rows.forEach(r => {
+      if (!r.cliente_telefono) { sinTelefono++; return; }
+      const tel = r.cliente_telefono;
+      if (!mapa[tel]) {
+        mapa[tel] = { nombre: r.cliente_nombre, telefono: tel, saldo_total: 0, max_dias: 0, cuentas: 0 };
+      }
+      mapa[tel].saldo_total += parseFloat(r.saldo_pendiente);
+      mapa[tel].max_dias = Math.max(mapa[tel].max_dias, parseInt(r.dias_transcurridos) || 0);
+      mapa[tel].cuentas++;
+    });
+
+    const clientes = Object.values(mapa);
+    let enviados = 0;
+    const fmt = n => '$' + Math.round(n).toLocaleString('es-MX');
+
+    for (const cl of clientes) {
+      const msg =
+        `💳 *RECORDATORIO DE PAGO — GRUPO ANDREU*\n\n` +
+        `Estimado/a ${cl.nombre},\n\n` +
+        `Tiene ${cl.cuentas > 1 ? cl.cuentas + ' facturas pendientes' : 'una factura pendiente'} ` +
+        `con un saldo total de *${fmt(cl.saldo_total)}* ` +
+        `(${cl.max_dias} días de atraso).\n\n` +
+        `Le pedimos regularizar su adeudo a la brevedad.\n\n` +
+        `Para aclaraciones comuníquese a 🏢 Grupo Andreu, Chilapa.\n\n` +
+        `_Mensaje automático — Sistema ERP Grupo Andreu_`;
+
+      const result = await enviarWhatsApp(cl.telefono, msg);
+      if (result.ok) enviados++;
+    }
+
+    res.json({
+      ok: true,
+      enviados,
+      total_clientes: clientes.length,
+      sin_telefono: sinTelefono,
+      sin_twilio: clientes.length > 0 && enviados === 0
+        ? 'Twilio no configurado — mensajes no enviados' : null
+    });
+  } catch (e) {
+    console.error('recordatorios CXC:', e.message);
+    res.status(500).json({ error: 'Error al enviar recordatorios' });
+  }
+});
+
 // GET /:venta_id/abonos — historial de abonos de una venta
 router.get('/:venta_id/abonos', auth(), async (req, res) => {
   try {

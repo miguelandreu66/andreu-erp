@@ -130,8 +130,9 @@ export const api = {
   cxcLista:      (params='') => req('GET', `/cxc${params}`),
   cxcResumen:    ()          => req('GET', '/cxc/resumen'),
   cxcAntiguedad: ()          => req('GET', '/cxc/antiguedad'),
-  cxcAbonos:     (id)        => req('GET', `/cxc/${id}/abonos`),
-  registrarAbono:(id, body)  => req('POST',`/cxc/${id}/abono`, body),
+  cxcAbonos:        (id)       => req('GET',  `/cxc/${id}/abonos`),
+  registrarAbono:   (id, body) => req('POST', `/cxc/${id}/abono`, body),
+  recordatoriosCXC: ()         => req('POST', '/cxc/recordatorios', {}),
 
   // Notificaciones
   enviarReporteDia: (telefono) => req('POST', '/notificaciones/reporte-dia', { telefono }),

@@ -17,6 +17,33 @@ const mesActual = () => {
 const MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio',
                'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
+// ── Exportar CSV ─────────────────────────────────────────────────
+const descargarCSV = (nombre, encabezados, filas) => {
+  const esc = v => {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [encabezados, ...filas].map(r => r.map(esc).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = nombre + '.csv'; a.click();
+  URL.revokeObjectURL(url);
+};
+
+const BtnExport = ({ onClick }) => (
+  <button
+    className="btn btn-ghost btn-sm"
+    onClick={onClick}
+    style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
+    title="Exportar a Excel/CSV"
+  >
+    ⬇ CSV
+  </button>
+);
+
 // ── Selector de mes/año ───────────────────────────────────────────
 function SelectorMes({ anio, mes, onChange }) {
   return (
@@ -213,8 +240,27 @@ export default function Reportes() {
 
               {/* Estado de resultados detallado */}
               <div className="card">
-                <div className="card-title">
-                  Estado de Resultados — {MESES[mes]} {anio}
+                <div className="card-title" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span>Estado de Resultados — {MESES[mes]} {anio}</span>
+                  <BtnExport onClick={() => descargarCSV(
+                    `ER_${MESES[mes]}_${anio}`,
+                    ['Concepto','Monto'],
+                    [
+                      ['INGRESOS',''],
+                      ['  Ventas contado', er.ingresos.ventas_contado],
+                      ['  Ventas crédito', er.ingresos.ventas_credito],
+                      ['TOTAL INGRESOS', er.ingresos.ventas_total],
+                      ['GASTOS',''],
+                      ['  Nómina', er.gastos.nomina],
+                      ['  Diésel', er.gastos.diesel],
+                      ['  Gastos operativos', er.gastos.operativos],
+                      ['  Mantenimiento', er.gastos.mantenimiento],
+                      ['  Compras a proveedores', er.gastos.compras],
+                      ['TOTAL GASTOS', er.gastos.total],
+                      [er.resultado.utilidad >= 0 ? 'UTILIDAD ESTIMADA' : 'PÉRDIDA ESTIMADA', er.resultado.utilidad],
+                      ['Margen %', fmt2(er.resultado.margen_pct) + '%'],
+                    ]
+                  )} />
                 </div>
                 <div style={{ maxWidth: 520 }}>
                   <div style={{ background:'#f0fdf4', borderRadius:8, padding:'8px 16px', marginBottom:8 }}>
@@ -287,7 +333,21 @@ export default function Reportes() {
       ══════════════════════════════════════════════════════════ */}
       {tab === 'productos' && (
         <div className="card">
-          <div className="card-title">Ingresos por Producto — {MESES[mes]} {anio}</div>
+          <div className="card-title" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span>Ingresos por Producto — {MESES[mes]} {anio}</span>
+            {productos?.productos?.length > 0 && (
+              <BtnExport onClick={() => descargarCSV(
+                `Productos_${MESES[mes]}_${anio}`,
+                ['Producto','# Ventas','Cantidad','Precio venta prom.','Costo compra prom.','Margen %','Ingreso total','% del total'],
+                productos.productos.map(p => [
+                  p.producto, p.num_ventas, p.cantidad_vendida,
+                  p.precio_venta_prom, p.costo_compra_prom || '',
+                  p.margen_pct !== null ? p.margen_pct + '%' : '',
+                  p.ingreso_total, p.pct_del_total + '%',
+                ])
+              )} />
+            )}
+          </div>
           {loadProd ? <div className="empty">Calculando...</div> :
             !productos || productos.productos?.length === 0
               ? <div className="empty">Sin ventas en este período</div>
@@ -375,6 +435,17 @@ export default function Reportes() {
           <div className="card-title" style={{ display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
             <span>Top 10 Clientes</span>
             <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+            {topCli?.clientes?.length > 0 && (
+              <BtnExport onClick={() => descargarCSV(
+                `TopClientes_${diasCli}dias`,
+                ['#','Cliente','Tipo','# Compras','Total comprado','Ticket promedio','Última compra','Saldo pendiente'],
+                topCli.clientes.map((c, i) => [
+                  i+1, c.nombre, c.tipo, c.num_compras,
+                  c.total_comprado, c.ticket_promedio,
+                  c.ultima_compra, c.saldo_pendiente,
+                ])
+              )} />
+            )}
               <select value={diasCli} onChange={e => setDiasCli(parseInt(e.target.value))}
                 style={{ fontSize:13, padding:'4px 8px', borderRadius:6, border:'1px solid #d1d5db' }}>
                 <option value={30}>Últimos 30 días</option>
@@ -449,7 +520,21 @@ export default function Reportes() {
       ══════════════════════════════════════════════════════════ */}
       {tab === 'flota' && (
         <div className="card">
-          <div className="card-title">Rentabilidad por Unidad — {MESES[mes]} {anio}</div>
+          <div className="card-title" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <span>Rentabilidad por Unidad — {MESES[mes]} {anio}</span>
+            {flota?.unidades?.length > 0 && (
+              <BtnExport onClick={() => descargarCSV(
+                `Flota_${MESES[mes]}_${anio}`,
+                ['Unidad','Descripción','Viajes','Km','Toneladas','Costo diésel','Mantenimiento','Costo total','$/km','$/ton'],
+                flota.unidades.map(u => [
+                  u.placas, u.vehiculo || u.descripcion,
+                  u.viajes, u.km_total, u.toneladas,
+                  u.costo_diesel, u.costo_mantenimiento, u.costo_total,
+                  u.costo_por_km || '', u.costo_por_ton || '',
+                ])
+              )} />
+            )}
+          </div>
           {loadFlota ? <div className="empty">Calculando...</div> :
             !flota || flota.unidades?.length === 0
               ? <div className="empty">Sin datos de flota en este período</div>

@@ -106,6 +106,28 @@ export default function Dashboard() {
           <div className="metric-label">Nómina semana</div>
           <div className={`metric-value ${pctNomina >= 100 ? 'green' : 'orange'}`}>{fmt(data.nomina_semana)}</div>
         </div>
+        <div className="metric">
+          <div className="metric-label">Por cobrar (CXC)</div>
+          <div className="metric-value" style={{ color: data.cxc_cuentas_vencidas > 0 ? '#dc2626' : '#1B3A6B' }}>
+            {fmt(data.cxc_total_por_cobrar)}
+          </div>
+          {data.cxc_cuentas_vencidas > 0 && (
+            <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>
+              {data.cxc_cuentas_vencidas} vencida(s)
+            </div>
+          )}
+        </div>
+        <div className="metric">
+          <div className="metric-label">Por pagar (CxP)</div>
+          <div className="metric-value" style={{ color: data.cxp_proximas_a_vencer > 0 ? '#d97706' : '#1B3A6B' }}>
+            {fmt(data.cxp_total_por_pagar)}
+          </div>
+          {data.cxp_proximas_a_vencer > 0 && (
+            <div style={{ fontSize: 11, color: '#d97706', fontWeight: 600 }}>
+              {data.cxp_proximas_a_vencer} vence(n) esta semana
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
