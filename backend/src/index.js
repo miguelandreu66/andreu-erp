@@ -26,6 +26,7 @@ app.use('/api/logistica',     require('./routes/logistica'));
 app.use('/api/reportes',      require('./routes/reportes'));
 app.use('/api/compras',       require('./routes/compras'));
 app.use('/api/cotizaciones',  require('./routes/cotizaciones'));
+app.use('/api/command-ai',    require('./routes/commandAi'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Andreu ERP' }));
 

@@ -1,0 +1,150 @@
+const db = require('../../db');
+
+// Umbrales operativos del motor de reglas (ajustables sin redeploy futuro)
+const UMBRALES = {
+  minutosGpsSinSenal: 15,
+  minutosParadaSospechosa: 25,
+  velocidadMaximaKmh: 90,
+  desviacionDieselAlerta: 0.18,
+  desviacionDieselCritica: 0.30,
+  scoreMinimo: 75,
+};
+
+// Evalúa el estado actual de la flota y devuelve un array de alertas candidatas.
+// No persiste — separar evaluación de persistencia permite hacer dry-run.
+async function evaluarReglas() {
+  const alertas = [];
+
+  const { rows: estado } = await db.query(`
+    SELECT
+      u.id           AS unidad_id,
+      u.placas,
+      u.descripcion,
+      ulp.viaje_id,
+      ulp.lat,
+      ulp.lng,
+      ulp.velocidad_kmh,
+      ulp.minutos_desde_ultimo,
+      v.operador_id,
+      op.nombre      AS operador_nombre,
+      v.destino,
+      v.km_recorridos AS km_viaje,
+      v.diesel_litros AS litros_viaje,
+      CASE
+        WHEN v.km_recorridos > 0 THEN v.diesel_litros / v.km_recorridos
+        ELSE NULL
+      END            AS rend_actual_lt_km,
+      db_base.rendimiento_esperado_lt_km AS rend_esperado_lt_km
+    FROM unidades u
+    LEFT JOIN unidades_ultima_posicion ulp ON ulp.unidad_id = u.id
+    LEFT JOIN viajes    v  ON v.id  = ulp.viaje_id
+    LEFT JOIN operadores op ON op.id = v.operador_id
+    LEFT JOIN diesel_baselines db_base
+           ON db_base.unidad_id = u.id
+          AND (db_base.destino = v.destino OR db_base.destino IS NULL)
+    WHERE u.activo = true
+  `);
+
+  const bucketCuartoHora = Math.floor(Date.now() / (15 * 60 * 1000));
+
+  for (const u of estado) {
+    const minSinSenal = u.minutos_desde_ultimo == null
+      ? null
+      : parseFloat(u.minutos_desde_ultimo);
+
+    if (minSinSenal !== null && minSinSenal >= UMBRALES.minutosGpsSinSenal) {
+      alertas.push({
+        tipo: 'gps_sin_senal',
+        nivel: 'critico',
+        unidad_id: u.unidad_id,
+        operador_id: u.operador_id,
+        viaje_id: u.viaje_id,
+        descripcion: `${u.placas} sin señal GPS por ${Math.round(minSinSenal)} minutos.`,
+        recomendacion: 'Contactar operador. Si no responde en 5 min, escalar a admin.',
+        dedupe_key: `gps_sin_senal:${u.unidad_id}:${bucketCuartoHora}`,
+        metadata: { minutos_sin_senal: Math.round(minSinSenal) },
+      });
+    }
+
+    const vel = u.velocidad_kmh == null ? 0 : parseFloat(u.velocidad_kmh);
+    if (vel > UMBRALES.velocidadMaximaKmh) {
+      alertas.push({
+        tipo: 'exceso_velocidad',
+        nivel: vel > UMBRALES.velocidadMaximaKmh + 20 ? 'alto' : 'medio',
+        unidad_id: u.unidad_id,
+        operador_id: u.operador_id,
+        viaje_id: u.viaje_id,
+        descripcion: `${u.placas} circulando a ${vel.toFixed(0)} km/h (límite operativo ${UMBRALES.velocidadMaximaKmh}).`,
+        recomendacion: 'Registrar infracción operativa y advertir al operador.',
+        dedupe_key: `exceso_velocidad:${u.unidad_id}:${bucketCuartoHora}`,
+        metadata: { velocidad_kmh: vel },
+      });
+    }
+
+    if (u.rend_actual_lt_km && u.rend_esperado_lt_km) {
+      const actual = parseFloat(u.rend_actual_lt_km);
+      const esperado = parseFloat(u.rend_esperado_lt_km);
+      const diff = (actual - esperado) / esperado;
+      if (diff >= UMBRALES.desviacionDieselAlerta) {
+        alertas.push({
+          tipo: 'diesel_anomalia',
+          nivel: diff >= UMBRALES.desviacionDieselCritica ? 'critico' : 'alto',
+          unidad_id: u.unidad_id,
+          operador_id: u.operador_id,
+          viaje_id: u.viaje_id,
+          descripcion: `${u.placas} consume ${actual.toFixed(2)} lt/km vs esperado ${esperado.toFixed(2)} lt/km (+${(diff * 100).toFixed(0)}%).`,
+          recomendacion: 'Revisar ticket de carga, ruta, manejo, posible fuga o falla mecánica.',
+          dedupe_key: `diesel_anomalia:${u.unidad_id}:${u.viaje_id || 'general'}`,
+          metadata: { rend_actual: actual, rend_esperado: esperado, exceso_pct: diff },
+        });
+      }
+    }
+  }
+
+  const { rows: bajos } = await db.query(`
+    SELECT DISTINCT ON (s.operador_id)
+      s.operador_id, s.score, s.periodo_fin, op.nombre
+    FROM scoring_snapshots s
+    JOIN operadores op ON op.id = s.operador_id
+    WHERE s.score < $1
+    ORDER BY s.operador_id, s.periodo_fin DESC
+  `, [UMBRALES.scoreMinimo]);
+
+  for (const b of bajos) {
+    alertas.push({
+      tipo: 'operador_bajo_desempeno',
+      nivel: 'alto',
+      unidad_id: null,
+      operador_id: b.operador_id,
+      viaje_id: null,
+      descripcion: `${b.nombre} con score ${b.score}/100 (último período ${b.periodo_fin}).`,
+      recomendacion: 'Revisar incidencias, consumo diesel y puntualidad. Aplicar plan correctivo.',
+      dedupe_key: `operador_bajo_desempeno:${b.operador_id}:${b.periodo_fin}`,
+      metadata: { score: b.score },
+    });
+  }
+
+  return alertas;
+}
+
+// Persiste alertas usando dedupe_key (ON CONFLICT DO NOTHING).
+// Devuelve cuántas eran nuevas vs cuántas se intentaron.
+async function persistirAlertas(alertas) {
+  if (!alertas.length) return { evaluadas: 0, creadas: 0 };
+  let creadas = 0;
+  for (const a of alertas) {
+    const { rowCount } = await db.query(`
+      INSERT INTO alertas
+        (tipo, nivel, unidad_id, operador_id, viaje_id, descripcion, recomendacion, dedupe_key, metadata)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      ON CONFLICT (dedupe_key) DO NOTHING
+    `, [
+      a.tipo, a.nivel, a.unidad_id, a.operador_id, a.viaje_id,
+      a.descripcion, a.recomendacion, a.dedupe_key, a.metadata || {},
+    ]);
+    creadas += rowCount;
+  }
+  return { evaluadas: alertas.length, creadas };
+}
+
+module.exports = { evaluarReglas, persistirAlertas, UMBRALES };
