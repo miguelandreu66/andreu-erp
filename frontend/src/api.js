@@ -18,6 +18,18 @@ const req = async (method, path, body) => {
   return data;
 };
 
+// Upload multipart (no Content-Type para que el browser ponga el boundary)
+const reqUpload = async (path, formData) => {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'POST',
+    headers: { ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) },
+    body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error de servidor');
+  return data;
+};
+
 export const api = {
   // Auth
   login: (email, password) => req('POST', '/auth/login', { email, password }),
@@ -173,6 +185,14 @@ export const api = {
   caiDieselBaselines: ()       => req('GET',  '/command-ai/diesel/baselines'),
   caiDieselRecomputar:()       => req('POST', '/command-ai/diesel/recomputar', {}),
   caiDieselForense:   (id, dias=30) => req('GET', `/command-ai/diesel/forense/${id}?dias=${dias}`),
+
+  // Documentos de unidades (Cloudinary)
+  docsConfig:           ()        => req('GET', '/unidades/documentos/config'),
+  docsListar:           (unidadId)=> req('GET', `/unidades/${unidadId}/documentos`),
+  docsSubir:            (unidadId, formData) => reqUpload(`/unidades/${unidadId}/documentos`, formData),
+  docsActualizar:       (id, body)=> req('PUT', `/unidades/documentos/${id}`, body),
+  docsEliminar:         (id)      => req('DELETE', `/unidades/documentos/${id}`),
+  docsAlertasVigencia:  ()        => req('GET', '/unidades/documentos/alertas-vigencia'),
 
   // Comercial IA
   caiInsightsAll:        ()    => req('GET', '/command-ai/insights/all'),
