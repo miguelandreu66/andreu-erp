@@ -28,9 +28,9 @@ export default function Login() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1B3A6B', padding: 16 }}>
       <div style={{ background: '#fff', borderRadius: 16, padding: '40px 36px', width: '100%', maxWidth: 400, boxShadow: '0 8px 40px rgba(0,0,0,.15)' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ width: 56, height: 56, background: '#1B3A6B', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 24 }}>🏗️</div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1B3A6B' }}>Grupo Andreu</h1>
-          <p style={{ fontSize: 14, color: '#888', marginTop: 4 }}>Sistema ERP · Acceso Corporativo</p>
+          <div style={{ width: 56, height: 56, background: '#1B3A6B', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 24 }}>🚛</div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#1B3A6B' }}>Andreu Logistics</h1>
+          <p style={{ fontSize: 14, color: '#888', marginTop: 4 }}>Sistema Operativo Inteligente</p>
         </div>
 
         {error && (

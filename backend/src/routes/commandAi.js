@@ -6,6 +6,10 @@ const { evaluarReglas, persistirAlertas, UMBRALES } = require('../lib/commandAi/
 const { generarResumen }    = require('../lib/commandAi/supervisor');
 const { calcularScoring, guardarSnapshot } = require('../lib/commandAi/scoring');
 const { recomputarBaselines, listarBaselines, analisisForense } = require('../lib/commandAi/diesel');
+const {
+  cobranzaVencida, clientesEnRiesgo, cotizacionesPendientes,
+  preciosPorRuta, briefingEjecutivo,
+} = require('../lib/commandAi/comercial');
 
 // Roles con acceso al módulo Command AI
 const ROLES_LECTURA  = ['director','admin','logistica','monitoreo'];
@@ -359,10 +363,56 @@ router.get('/diesel/forense/:unidad_id', auth(ROLES_LECTURA), async (req, res) =
 });
 
 // ══════════════════════════════════════════════════════════════════
+// COMERCIAL IA — insights para área de ventas/cobranza/clientes
+// ══════════════════════════════════════════════════════════════════
+
+router.get('/insights/cobranza-vencida', auth(ROLES_LECTURA), async (_req, res) => {
+  try { res.json(await cobranzaVencida()); }
+  catch (e) { console.error('insights cobranza:', e.message); res.status(500).json({ error: 'Error en cobranza vencida' }); }
+});
+
+router.get('/insights/clientes-riesgo', auth(ROLES_LECTURA), async (req, res) => {
+  const dias = Math.min(parseInt(req.query.dias) || 60, 365);
+  try { res.json(await clientesEnRiesgo(dias)); }
+  catch (e) { console.error('insights clientes-riesgo:', e.message); res.status(500).json({ error: 'Error en clientes en riesgo' }); }
+});
+
+router.get('/insights/cotizaciones-pendientes', auth(ROLES_LECTURA), async (_req, res) => {
+  try { res.json(await cotizacionesPendientes()); }
+  catch (e) { console.error('insights cotizaciones:', e.message); res.status(500).json({ error: 'Error en cotizaciones pendientes' }); }
+});
+
+router.get('/insights/precios-ruta', auth(ROLES_LECTURA), async (_req, res) => {
+  try { res.json(await preciosPorRuta()); }
+  catch (e) { console.error('insights precios:', e.message); res.status(500).json({ error: 'Error en precios por ruta' }); }
+});
+
+router.get('/insights/briefing', auth(ROLES_LECTURA), async (_req, res) => {
+  try { res.json(await briefingEjecutivo()); }
+  catch (e) { console.error('insights briefing:', e.message); res.status(500).json({ error: 'Error al generar briefing' }); }
+});
+
+router.get('/insights/all', auth(ROLES_LECTURA), async (_req, res) => {
+  try {
+    const [briefing, cobranza, riesgo, cotiz, precios] = await Promise.all([
+      briefingEjecutivo(),
+      cobranzaVencida(),
+      clientesEnRiesgo(60),
+      cotizacionesPendientes(),
+      preciosPorRuta(),
+    ]);
+    res.json({ briefing, cobranza, riesgo, cotizaciones: cotiz, precios });
+  } catch (e) {
+    console.error('insights all:', e.message);
+    res.status(500).json({ error: 'Error al generar insights consolidados' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════
 // CONFIGURACIÓN — exponer umbrales para que el frontend los muestre
 // ══════════════════════════════════════════════════════════════════
 router.get('/config', auth(ROLES_LECTURA), (_req, res) => {
-  res.json({ umbrales: UMBRALES, version: '1.0.0' });
+  res.json({ umbrales: UMBRALES, version: '1.1.0' });
 });
 
 module.exports = router;

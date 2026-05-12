@@ -2,27 +2,48 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+// NAV reordenado para Andreu Logistics — transporte de carga pesada B2B.
+// Caja, Inventario y Compras de mercancía se ocultan del menú diario (manual fase 2.3).
+// El histórico FerreExpress sigue accesible vía rutas directas para el Director.
 const NAV = [
+  // ── Núcleo operativo ──────────────────────────────
   { to: '/', label: 'Dashboard', icon: '📊', roles: ['director','admin','caja','logistica','monitoreo'] },
-  { to: '/command-ai', label: 'Command AI', icon: '🤖', roles: ['director','admin','logistica','monitoreo'] },
-  { to: '/caja', label: 'Caja y Ventas', icon: '💵', roles: ['director','admin','caja'] },
-  { to: '/clientes', label: 'Clientes',  icon: '👥', roles: ['director','admin','caja'] },
-  { to: '/cxc',          label: 'Por Cobrar',   icon: '💳', roles: ['director','admin','caja'] },
-  { to: '/cotizaciones', label: 'Cotizaciones', icon: '📄', roles: ['director','admin','caja'] },
-  { to: '/compras',      label: 'Compras',      icon: '🛒', roles: ['director','admin'] },
-  { to: '/logistica',     label: 'KPIs Flota',     icon: '📡', roles: ['director','admin','logistica','monitoreo'] },
-  { to: '/registro-movil',label: '📲 Reg. Viaje', icon: '🚛', roles: ['director','admin','logistica','monitoreo'] },
-  { to: '/flota',         label: 'Flota',          icon: '🗂', roles: ['director','admin','logistica','monitoreo'] },
+  { to: '/command-ai',     label: 'Command AI',   icon: '🤖', roles: ['director','admin','logistica','monitoreo'] },
+  { to: '/registro-movil', label: 'Registrar Viaje', icon: '🚛', roles: ['director','admin','logistica','monitoreo'] },
+  { to: '/logistica',      label: 'KPIs Flota',   icon: '📡', roles: ['director','admin','logistica','monitoreo'] },
+
+  // ── Flota y operación ─────────────────────────────
+  { to: '/flota',         label: 'Unidades',      icon: '🗂', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/mantenimiento', label: 'Mantenimiento', icon: '🔧', roles: ['director','admin','logistica'] },
-  { to: '/gastos', label: 'Gastos', icon: '📋', roles: ['director','admin','caja','logistica'] },
-  { to: '/inventario', label: 'Inventario', icon: '📦', roles: ['director','admin','logistica','monitoreo'] },
-  { to: '/nomina', label: 'Nómina', icon: '💰', roles: ['director','admin'] },
+  { to: '/gastos',        label: 'Gastos y Diesel', icon: '⛽', roles: ['director','admin','caja','logistica'] },
+
+  // ── Comercial / Cobranza ──────────────────────────
+  { to: '/clientes',     label: 'Clientes',     icon: '👥', roles: ['director','admin','caja'] },
+  { to: '/cotizaciones', label: 'Cotizaciones', icon: '📄', roles: ['director','admin','caja'] },
+  { to: '/cxc',          label: 'Por Cobrar',   icon: '💳', roles: ['director','admin','caja'] },
+
+  // ── Backoffice ────────────────────────────────────
+  { to: '/compras', label: 'Refacciones y Proveedores', icon: '🛒', roles: ['director','admin'] },
+  { to: '/nomina',  label: 'Nómina y Bonos', icon: '💰', roles: ['director','admin'] },
+
+  // ── Reportes ──────────────────────────────────────
   { to: '/historicos', label: 'Tendencias', icon: '📈', roles: ['director','admin','monitoreo'] },
-  { to: '/reportes', label: 'Reportes', icon: '📑', roles: ['director','admin','monitoreo'] },
+  { to: '/reportes',   label: 'Reportes',   icon: '📑', roles: ['director','admin','monitoreo'] },
+
+  // ── Histórico FerreExpress (solo Director, modo consulta) ──
+  { to: '/caja',       label: 'Caja (legacy)',      icon: '🗃️', roles: ['director'] },
+  { to: '/inventario', label: 'Inventario (legacy)', icon: '🗃️', roles: ['director'] },
+
   { to: '/configuracion', label: 'Configuración', icon: '⚙️', roles: ['director','admin'] },
 ];
 
-const ROLES = { director:'Director', admin:'Administrador', caja:'Caja', logistica:'Logística', monitoreo:'Monitoreo' };
+const ROLES = {
+  director: 'Director',
+  admin: 'Administrador General',
+  caja: 'Auxiliar Administrativo',
+  logistica: 'Coordinador Operativo',
+  monitoreo: 'Monitoreo',
+};
 
 export default function Layout() {
   const { usuario, logout } = useAuth();
@@ -36,8 +57,8 @@ export default function Layout() {
       <div className={`overlay ${open?'show':''}`} onClick={() => setOpen(false)} />
       <div className={`sidebar ${open?'open':''}`}>
         <div className="sidebar-logo">
-          <h1>Grupo Andreu</h1>
-          <span>Sistema ERP v2</span>
+          <h1>Andreu Logistics</h1>
+          <span>Sistema Operativo Inteligente</span>
         </div>
         <nav className="sidebar-nav">
           {NAV.filter(n => n.roles.includes(usuario?.rol)).map(n => (
@@ -55,7 +76,7 @@ export default function Layout() {
       <div style={{ flex:1, display:'flex', flexDirection:'column' }}>
         <div className="mobile-header">
           <button className="hamburger" onClick={() => setOpen(!open)}>☰</button>
-          <span style={{ fontWeight:600 }}>Grupo Andreu ERP</span>
+          <span style={{ fontWeight:600 }}>Andreu Logistics</span>
           <span style={{ fontSize:12, opacity:.7 }}>{usuario?.nombre}</span>
         </div>
         <div className="main-content"><Outlet /></div>
