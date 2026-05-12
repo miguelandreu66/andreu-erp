@@ -124,6 +124,59 @@ async function evaluarReglas() {
     });
   }
 
+  // Documentos vencidos o por vencer
+  try {
+    const { rows: docs } = await db.query(`
+      SELECT
+        d.id, d.tipo, d.nombre, d.vigencia_fin, d.unidad_id,
+        u.placas,
+        (d.vigencia_fin - CURRENT_DATE)::int AS dias_restantes,
+        CASE
+          WHEN d.vigencia_fin < CURRENT_DATE THEN 'vencido'
+          ELSE 'por_vencer'
+        END AS estado
+      FROM unidad_documentos d
+      JOIN unidades u ON u.id = d.unidad_id
+      WHERE d.vigencia_fin IS NOT NULL
+        AND d.vigencia_fin <= CURRENT_DATE + (d.alertar_dias_antes || ' days')::interval
+    `);
+
+    const NOMBRES_TIPO = {
+      tarjeta_circulacion: 'Tarjeta de circulación',
+      poliza_seguro: 'Póliza de seguro',
+      permiso_sct: 'Permiso SCT',
+      verificacion_vehicular: 'Verificación vehicular',
+      comprobante_propiedad: 'Comprobante de propiedad',
+      tarjeta_caja_remolque: 'Tarjeta caja/remolque',
+      foto_unidad: 'Foto de unidad',
+      factura_unidad: 'Factura de unidad',
+      tenencia: 'Tenencia',
+      otro: 'Otro documento',
+    };
+
+    for (const d of docs) {
+      const nombreTipo = NOMBRES_TIPO[d.tipo] || d.tipo;
+      const vencido = d.estado === 'vencido';
+      alertas.push({
+        tipo: vencido ? 'documento_vencido' : 'documento_por_vencer',
+        nivel: vencido ? 'critico' : (d.dias_restantes <= 7 ? 'alto' : 'medio'),
+        unidad_id: d.unidad_id,
+        operador_id: null,
+        viaje_id: null,
+        descripcion: vencido
+          ? `${nombreTipo} de ${d.placas} VENCIÓ hace ${Math.abs(d.dias_restantes)} día(s) (${d.vigencia_fin}).`
+          : `${nombreTipo} de ${d.placas} vence en ${d.dias_restantes} día(s) (${d.vigencia_fin}).`,
+        recomendacion: vencido
+          ? 'NO usar esa unidad para viajes federales hasta renovar. Riesgo de multa en retén.'
+          : 'Tramitar renovación esta semana. Subir documento actualizado en el módulo Unidades.',
+        dedupe_key: `${vencido ? 'documento_vencido' : 'documento_por_vencer'}:${d.id}:${new Date().toISOString().slice(0, 10)}`,
+        metadata: { documento_id: d.id, tipo: d.tipo, dias_restantes: d.dias_restantes, vigencia_fin: d.vigencia_fin },
+      });
+    }
+  } catch (e) {
+    console.warn('rules docs check skipped:', e.message);
+  }
+
   return alertas;
 }
 
