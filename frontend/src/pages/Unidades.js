@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { api } from '../api';
+import { api, fileUrl } from '../api';
 import { useAuth } from '../context/AuthContext';
 
 const TIPOS_DOC = {
@@ -382,13 +382,7 @@ function ModalDocumentos({ unidad, puedeEditar, onClose }) {
             </div>
           )}
 
-          {config && !config.cloudinary_configurado && (
-            <div style={{ background: '#fef3c7', border: '1px solid #d97706', color: '#78350f', padding: 12, borderRadius: 8, marginBottom: 12, fontSize: 13 }}>
-              ⚠️ La subida de archivos aún no está configurada. Pídele al admin que agregue las credenciales de Cloudinary en Railway.
-            </div>
-          )}
-
-          {puedeEditar && config?.cloudinary_configurado && !mostrarForm && (
+          {puedeEditar && !mostrarForm && (
             <button onClick={() => setMostrarForm(true)} className="btn btn-primary" style={{ marginBottom: 16 }}>
               ➕ Agregar documento
             </button>
@@ -463,7 +457,12 @@ function DocItem({ doc, puedeEditar, onDeleted }) {
           {doc.notas && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4, fontStyle: 'italic' }}>"{doc.notas}"</div>}
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          <a href={doc.archivo_url} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm">Ver</a>
+          <a
+            href={doc.archivo_url || fileUrl(`/unidades/documentos/${doc.id}/archivo`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-ghost btn-sm"
+          >Ver</a>
           {puedeEditar && (
             <button onClick={eliminar} className="btn btn-ghost btn-sm" style={{ color: '#dc2626' }}>Eliminar</button>
           )}

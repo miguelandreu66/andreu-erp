@@ -30,6 +30,13 @@ const reqUpload = async (path, formData) => {
   return data;
 };
 
+// URL absoluta con token para descargas (target="_blank" pierde headers)
+export const fileUrl = (path) => {
+  const token = getToken();
+  const sep = path.includes('?') ? '&' : '?';
+  return `${BASE}${path}${token ? `${sep}token=${encodeURIComponent(token)}` : ''}`;
+};
+
 export const api = {
   // Auth
   login: (email, password) => req('POST', '/auth/login', { email, password }),
