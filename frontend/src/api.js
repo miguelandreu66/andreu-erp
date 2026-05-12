@@ -149,4 +149,28 @@ export const api = {
   crearOperador:      (body)     => req('POST', '/operadores', body),
   actualizarOperador: (id, body) => req('PUT', `/operadores/${id}`, body),
   toggleOperador: (id) => req('PUT', `/operadores/${id}/toggle`),
+
+  // Command AI / Andreu Logistics
+  caiDashboard:       ()       => req('GET',  '/command-ai/dashboard'),
+  caiConfig:          ()       => req('GET',  '/command-ai/config'),
+  caiSupervisor:      ()       => req('GET',  '/command-ai/supervisor'),
+
+  caiGpsLatest:       ()       => req('GET',  '/command-ai/gps/latest'),
+  caiGpsUnidad:       (id, p='') => req('GET', `/command-ai/gps/unidad/${id}${p}`),
+  caiGpsPing:         (body)   => req('POST', '/command-ai/gps/ping', body),
+  caiGpsBatch:        (body)   => req('POST', '/command-ai/gps/batch', body),
+
+  caiAlertas:         (p='')   => req('GET',  `/command-ai/alertas${p}`),
+  caiEvaluarAlertas:  ()       => req('POST', '/command-ai/alertas/evaluar', {}),
+  caiAtenderAlerta:   (id)         => req('PUT',  `/command-ai/alertas/${id}/atender`, {}),
+  caiResolverAlerta:  (id, notas)  => req('PUT',  `/command-ai/alertas/${id}/resolver`, { notas }),
+  caiDescartarAlerta: (id, notas)  => req('PUT',  `/command-ai/alertas/${id}/descartar`, { notas }),
+
+  caiScoring:         (dias=30)  => req('GET',  `/command-ai/scoring?dias=${dias}`),
+  caiScoringSnapshot: (dias=30)  => req('POST', '/command-ai/scoring/snapshot', { dias }),
+  caiScoringHistorico:(id)       => req('GET',  `/command-ai/scoring/historico/${id}`),
+
+  caiDieselBaselines: ()       => req('GET',  '/command-ai/diesel/baselines'),
+  caiDieselRecomputar:()       => req('POST', '/command-ai/diesel/recomputar', {}),
+  caiDieselForense:   (id, dias=30) => req('GET', `/command-ai/diesel/forense/${id}?dias=${dias}`),
 };
