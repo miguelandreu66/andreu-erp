@@ -13,7 +13,7 @@ const NAV = [
   { to: '/logistica',      label: 'KPIs Flota',   icon: '📡', roles: ['director','admin','logistica','monitoreo'] },
 
   // ── Flota y operación ─────────────────────────────
-  { to: '/flota',         label: 'Unidades',      icon: '🗂', roles: ['director','admin','logistica','monitoreo'] },
+  { to: '/unidades',      label: 'Unidades',      icon: '🚛', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/mantenimiento', label: 'Mantenimiento', icon: '🔧', roles: ['director','admin','logistica'] },
   { to: '/gastos',        label: 'Gastos y Diesel', icon: '⛽', roles: ['director','admin','caja','logistica'] },
 
