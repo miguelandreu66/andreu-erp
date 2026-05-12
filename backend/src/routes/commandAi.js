@@ -14,6 +14,8 @@ const {
 // Roles con acceso al módulo Command AI
 const ROLES_LECTURA  = ['director','admin','logistica','monitoreo'];
 const ROLES_ESCRITURA = ['director','admin','logistica'];
+// Dashboard e insights comerciales: Auxiliar Administrativo (caja) también puede leer
+const ROLES_DASHBOARD = ['director','admin','logistica','monitoreo','caja'];
 
 // Helper: registrar acción en audit_log (no falla si no se puede)
 async function auditar(usuario_id, accion, entidad, entidad_id, detalle, ip) {
@@ -30,7 +32,7 @@ async function auditar(usuario_id, accion, entidad, entidad_id, detalle, ip) {
 // ══════════════════════════════════════════════════════════════════
 // DASHBOARD — estado consolidado de la flota
 // ══════════════════════════════════════════════════════════════════
-router.get('/dashboard', auth(ROLES_LECTURA), async (_req, res) => {
+router.get('/dashboard', auth(ROLES_DASHBOARD), async (_req, res) => {
   try {
     const { rows: posiciones } = await db.query(`
       SELECT
@@ -387,7 +389,7 @@ router.get('/insights/precios-ruta', auth(ROLES_LECTURA), async (_req, res) => {
   catch (e) { console.error('insights precios:', e.message); res.status(500).json({ error: 'Error en precios por ruta' }); }
 });
 
-router.get('/insights/briefing', auth(ROLES_LECTURA), async (_req, res) => {
+router.get('/insights/briefing', auth(ROLES_DASHBOARD), async (_req, res) => {
   try { res.json(await briefingEjecutivo()); }
   catch (e) { console.error('insights briefing:', e.message); res.status(500).json({ error: 'Error al generar briefing' }); }
 });

@@ -3,10 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Caja from './pages/Caja';
 import Flota from './pages/Flota';
 import Gastos from './pages/Gastos';
-import Inventario from './pages/Inventario';
 import Nomina from './pages/Nomina';
 import Reportes from './pages/Reportes';
 import Configuracion from './pages/Configuracion';
@@ -38,9 +36,6 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Dashboard />} />
-            {/* Legacy FerreExpress — solo Director, modo consulta histórica */}
-            <Route path="caja" element={<PrivateRoute roles={['director']}><Caja /></PrivateRoute>} />
-            <Route path="inventario" element={<PrivateRoute roles={['director']}><Inventario /></PrivateRoute>} />
             <Route path="flota" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Flota /></PrivateRoute>} />
             <Route path="gastos" element={<PrivateRoute roles={['director','admin','caja','logistica']}><Gastos /></PrivateRoute>} />
             <Route path="nomina" element={<PrivateRoute roles={['director','admin']}><Nomina /></PrivateRoute>} />

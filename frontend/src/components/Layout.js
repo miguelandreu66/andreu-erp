@@ -30,10 +30,6 @@ const NAV = [
   { to: '/historicos', label: 'Tendencias', icon: '📈', roles: ['director','admin','monitoreo'] },
   { to: '/reportes',   label: 'Reportes',   icon: '📑', roles: ['director','admin','monitoreo'] },
 
-  // ── Histórico FerreExpress (solo Director, modo consulta) ──
-  { to: '/caja',       label: 'Caja (legacy)',      icon: '🗃️', roles: ['director'] },
-  { to: '/inventario', label: 'Inventario (legacy)', icon: '🗃️', roles: ['director'] },
-
   { to: '/configuracion', label: 'Configuración', icon: '⚙️', roles: ['director','admin'] },
 ];
 
