@@ -18,6 +18,7 @@ import Cotizaciones from './pages/Cotizaciones';
 import RegistroMovil from './pages/RegistroMovil';
 import CommandAI from './pages/CommandAI';
 import Unidades from './pages/Unidades';
+import Operadores from './pages/Operadores';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="unidades" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Unidades /></PrivateRoute>} />
+            <Route path="operadores" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Operadores /></PrivateRoute>} />
             <Route path="flota" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Flota /></PrivateRoute>} />
             <Route path="gastos" element={<PrivateRoute roles={['director','admin','caja','logistica']}><Gastos /></PrivateRoute>} />
             <Route path="nomina" element={<PrivateRoute roles={['director','admin']}><Nomina /></PrivateRoute>} />

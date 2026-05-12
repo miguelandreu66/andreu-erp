@@ -14,6 +14,7 @@ const NAV = [
 
   // ── Flota y operación ─────────────────────────────
   { to: '/unidades',      label: 'Unidades',      icon: '🚛', roles: ['director','admin','logistica','monitoreo'] },
+  { to: '/operadores',    label: 'Operadores',    icon: '👤', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/mantenimiento', label: 'Mantenimiento', icon: '🔧', roles: ['director','admin','logistica'] },
   { to: '/gastos',        label: 'Gastos y Diesel', icon: '⛽', roles: ['director','admin','caja','logistica'] },
 

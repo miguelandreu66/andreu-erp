@@ -174,7 +174,61 @@ async function evaluarReglas() {
       });
     }
   } catch (e) {
-    console.warn('rules docs check skipped:', e.message);
+    console.warn('rules docs unidad check skipped:', e.message);
+  }
+
+  // Documentos de operadores próximos a vencer o vencidos
+  try {
+    const { rows: docsOp } = await db.query(`
+      SELECT
+        d.id, d.tipo, d.nombre, d.vigencia_fin, d.operador_id,
+        op.nombre AS operador_nombre,
+        (d.vigencia_fin - CURRENT_DATE)::int AS dias_restantes,
+        CASE WHEN d.vigencia_fin < CURRENT_DATE THEN 'vencido' ELSE 'por_vencer' END AS estado
+      FROM operador_documentos d
+      JOIN operadores op ON op.id = d.operador_id
+      WHERE d.vigencia_fin IS NOT NULL
+        AND d.vigencia_fin <= CURRENT_DATE + (d.alertar_dias_antes || ' days')::interval
+    `);
+
+    const NOMBRES_TIPO_OP = {
+      licencia_federal: 'Licencia federal',
+      examen_medico: 'Examen médico',
+      ine: 'INE',
+      curp: 'CURP',
+      rfc: 'RFC',
+      comprobante_domicilio: 'Comprobante de domicilio',
+      antecedentes_no_penales: 'Antecedentes no penales',
+      contrato_laboral: 'Contrato laboral',
+      foto_perfil: 'Foto de perfil',
+      capacitacion: 'Capacitación',
+      otro: 'Otro documento',
+    };
+
+    for (const d of docsOp) {
+      const nombreTipo = NOMBRES_TIPO_OP[d.tipo] || d.tipo;
+      const vencido = d.estado === 'vencido';
+      const esCritico = vencido && (d.tipo === 'licencia_federal' || d.tipo === 'examen_medico');
+      alertas.push({
+        tipo: vencido ? 'op_documento_vencido' : 'op_documento_por_vencer',
+        nivel: esCritico ? 'critico' : vencido ? 'alto' : (d.dias_restantes <= 7 ? 'alto' : 'medio'),
+        unidad_id: null,
+        operador_id: d.operador_id,
+        viaje_id: null,
+        descripcion: vencido
+          ? `${nombreTipo} de ${d.operador_nombre} VENCIÓ hace ${Math.abs(d.dias_restantes)} día(s) (${d.vigencia_fin}).`
+          : `${nombreTipo} de ${d.operador_nombre} vence en ${d.dias_restantes} día(s) (${d.vigencia_fin}).`,
+        recomendacion: esCritico
+          ? 'NO asignar viajes federales a este operador hasta renovar. Riesgo legal y de multa.'
+          : vencido
+            ? 'Solicitar renovación inmediata al operador.'
+            : 'Recordar al operador renovar este documento esta semana.',
+        dedupe_key: `${vencido ? 'op_documento_vencido' : 'op_documento_por_vencer'}:${d.id}:${new Date().toISOString().slice(0, 10)}`,
+        metadata: { documento_id: d.id, tipo: d.tipo, dias_restantes: d.dias_restantes, vigencia_fin: d.vigencia_fin },
+      });
+    }
+  } catch (e) {
+    console.warn('rules docs operador check skipped:', e.message);
   }
 
   return alertas;
