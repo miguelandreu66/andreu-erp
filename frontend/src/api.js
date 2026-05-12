@@ -201,6 +201,14 @@ export const api = {
   docsEliminar:         (id)      => req('DELETE', `/unidades/documentos/${id}`),
   docsAlertasVigencia:  ()        => req('GET', '/unidades/documentos/alertas-vigencia'),
 
+  // Documentos de operadores
+  opDocsConfig:           ()        => req('GET', '/operadores/config'),
+  opDocsListar:           (opId)    => req('GET', `/operadores/${opId}/documentos`),
+  opDocsSubir:            (opId, formData) => reqUpload(`/operadores/${opId}/documentos`, formData),
+  opDocsActualizar:       (id, body)=> req('PUT', `/operadores/documentos/${id}`, body),
+  opDocsEliminar:         (id)      => req('DELETE', `/operadores/documentos/${id}`),
+  opDocsAlertasVigencia:  ()        => req('GET', '/operadores/documentos/alertas-vigencia'),
+
   // Comercial IA
   caiInsightsAll:        ()    => req('GET', '/command-ai/insights/all'),
   caiBriefing:           ()    => req('GET', '/command-ai/insights/briefing'),
