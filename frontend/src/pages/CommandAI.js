@@ -343,6 +343,164 @@ function TabDiesel({ baselines, onRecomputar, recomputando }) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+function TabComercial({ insights, onRefresh, cargando }) {
+  if (!insights) return <div>Cargando insights comerciales...</div>;
+  const { briefing, cobranza, riesgo, cotizaciones, precios } = insights;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h3 style={{ margin: 0 }}>🧠 Asistente Comercial IA</h3>
+        <button onClick={onRefresh} disabled={cargando} style={btnSecondary}>
+          {cargando ? 'Cargando...' : '↻ Refrescar'}
+        </button>
+      </div>
+
+      {briefing && (
+        <div style={{
+          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+          color: '#fff', padding: 22, borderRadius: 14, marginBottom: 20,
+          fontFamily: 'ui-monospace, "SF Mono", monospace', fontSize: 13, lineHeight: 1.7,
+          whiteSpace: 'pre-wrap',
+        }}>
+          {briefing.texto}
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
+        {/* Cobranza vencida */}
+        <InsightCard
+          title="💳 Cobranza vencida"
+          color="#dc2626"
+          count={cobranza?.count || 0}
+          subtitle={cobranza?.count
+            ? `$${(cobranza.total_vencido || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })} en riesgo`
+            : 'Al corriente'}
+          emptyMsg="Sin facturas vencidas. Cobranza al día ✓"
+        >
+          {(cobranza?.items || []).slice(0, 5).map(i => (
+            <div key={i.id} style={rowInsight}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{i.cliente || 'Sin cliente'}</div>
+                <div style={{ fontSize: 11, color: '#6b7280' }}>
+                  Vencido {i.dias_vencido}d · {i.telefono || 'sin teléfono'}
+                </div>
+              </div>
+              <div style={{ fontWeight: 700, color: '#dc2626', fontSize: 13 }}>
+                ${parseFloat(i.total || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}
+              </div>
+            </div>
+          ))}
+        </InsightCard>
+
+        {/* Clientes en riesgo */}
+        <InsightCard
+          title="⚠️ Clientes en riesgo"
+          color="#d97706"
+          count={riesgo?.count || 0}
+          subtitle={riesgo?.count ? `Sin actividad > 60 días` : 'Todos los clientes activos'}
+          emptyMsg="Ningún cliente en riesgo de pérdida ✓"
+        >
+          {(riesgo?.items || []).slice(0, 5).map(i => (
+            <div key={i.id} style={rowInsight}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{i.nombre}</div>
+                <div style={{ fontSize: 11, color: '#6b7280' }}>
+                  {i.dias_sin_actividad ? `${i.dias_sin_actividad}d sin actividad` : 'Nunca contactado'}
+                  {i.tipo && ` · ${i.tipo}`}
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: '#6b7280', textAlign: 'right' }}>
+                ${parseFloat(i.valor_historico || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}
+                <div style={{ fontSize: 10 }}>histórico</div>
+              </div>
+            </div>
+          ))}
+        </InsightCard>
+
+        {/* Cotizaciones pendientes */}
+        <InsightCard
+          title="📄 Cotizaciones sin convertir"
+          color="#2563eb"
+          count={cotizaciones?.count || 0}
+          subtitle={cotizaciones?.count
+            ? `Potencial $${(cotizaciones.total_potencial || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}`
+            : 'Sin cotizaciones pendientes'}
+          emptyMsg="No hay cotizaciones esperando conversión"
+        >
+          {(cotizaciones?.items || []).slice(0, 5).map(i => (
+            <div key={i.id} style={rowInsight}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{i.folio || `#${i.id}`} · {i.cliente || 'Sin cliente'}</div>
+                <div style={{ fontSize: 11, color: i.vencida ? '#dc2626' : '#6b7280' }}>
+                  {i.dias_desde_emision}d desde emisión {i.vencida && '· VENCIDA'}
+                </div>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#2563eb' }}>
+                ${parseFloat(i.total || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 })}
+              </div>
+            </div>
+          ))}
+        </InsightCard>
+
+        {/* Precios por ruta */}
+        <InsightCard
+          title="🗺️ Precios sugeridos por ruta"
+          color="#16a34a"
+          count={precios?.count || 0}
+          subtitle={precios?.count ? `Histórico últimos 180 días` : 'Sin datos suficientes'}
+          emptyMsg="Necesitas al menos 2 viajes por ruta para sugerencias"
+        >
+          {(precios?.items || []).slice(0, 5).map((i, idx) => (
+            <div key={idx} style={rowInsight}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>
+                  {i.origen || '?'} → {i.destino}
+                </div>
+                <div style={{ fontSize: 11, color: '#6b7280' }}>
+                  {i.viajes} viajes · {i.km_promedio ? `${i.km_promedio} km` : 'sin km'}
+                </div>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#16a34a', textAlign: 'right' }}>
+                {i.precio_promedio
+                  ? `$${i.precio_promedio.toLocaleString('es-MX', { maximumFractionDigits: 0 })}`
+                  : <span style={{ color: '#9ca3af', fontWeight: 400, fontSize: 11 }}>diesel ${i.diesel_promedio}</span>}
+              </div>
+            </div>
+          ))}
+        </InsightCard>
+      </div>
+    </div>
+  );
+}
+
+function InsightCard({ title, color, count, subtitle, emptyMsg, children }) {
+  const hasContent = React.Children.count(children) > 0;
+  return (
+    <div style={{
+      background: '#fff', border: '1px solid #e5e7eb', borderTop: `3px solid ${color}`,
+      borderRadius: 10, padding: 16,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>{title}</div>
+          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{subtitle}</div>
+        </div>
+        <div style={{ fontSize: 28, fontWeight: 900, color, lineHeight: 1 }}>{count}</div>
+      </div>
+      {hasContent
+        ? <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 8 }}>{children}</div>
+        : <div style={{ fontSize: 12, color: '#9ca3af', padding: '8px 0' }}>{emptyMsg}</div>}
+    </div>
+  );
+}
+
+const rowInsight = {
+  display: 'flex', alignItems: 'center', gap: 8,
+  padding: '8px 0', borderBottom: '1px solid #f9fafb',
+};
+
+// ══════════════════════════════════════════════════════════════════
 export default function CommandAI() {
   const [tab,        setTab]        = useState('dashboard');
   const [data,       setData]       = useState(null);
@@ -350,6 +508,8 @@ export default function CommandAI() {
   const [resumen,    setResumen]    = useState(null);
   const [scoring,    setScoring]    = useState(null);
   const [baselines,  setBaselines]  = useState(null);
+  const [insights,   setInsights]   = useState(null);
+  const [insightsCargando, setInsightsCargando] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [evaluando,   setEvaluando]   = useState(false);
   const [snapping,    setSnapping]    = useState(false);
@@ -360,19 +520,27 @@ export default function CommandAI() {
   const cargarTodo = useCallback(async () => {
     setError(null);
     try {
-      const [d, a, r, s, b] = await Promise.all([
+      const [d, a, r, s, b, i] = await Promise.all([
         api.caiDashboard(),
         api.caiAlertas('?estado=pendiente&limit=50').catch(() => []),
         api.caiSupervisor().catch(() => null),
         api.caiScoring(30).catch(() => ({ dias: 30, operadores: [] })),
         api.caiDieselBaselines().catch(() => []),
+        api.caiInsightsAll().catch(() => null),
       ]);
-      setData(d); setAlertas(a); setResumen(r); setScoring(s); setBaselines(b);
+      setData(d); setAlertas(a); setResumen(r); setScoring(s); setBaselines(b); setInsights(i);
     } catch (e) {
       console.error(e);
       setError(e.message || 'Error al cargar datos');
     }
   }, []);
+
+  const recargarInsights = async () => {
+    setInsightsCargando(true);
+    try { setInsights(await api.caiInsightsAll()); }
+    catch (e) { alert('Error: ' + e.message); }
+    finally { setInsightsCargando(false); }
+  };
 
   useEffect(() => { cargarTodo(); }, [cargarTodo]);
 
@@ -437,6 +605,7 @@ export default function CommandAI() {
   const tabs = [
     { id: 'dashboard',  label: 'Dashboard',     icon: '📊' },
     { id: 'alertas',    label: `Alertas${totalAlertasCriticas ? ` (${totalAlertasCriticas})` : ''}`, icon: '🚨' },
+    { id: 'comercial',  label: 'Comercial IA',  icon: '🧠' },
     { id: 'supervisor', label: 'Supervisor IA', icon: '🤖' },
     { id: 'scoring',    label: 'Scoring',       icon: '⭐' },
     { id: 'diesel',     label: 'Diesel forense', icon: '⛽' },
@@ -463,6 +632,7 @@ export default function CommandAI() {
 
       {tab === 'dashboard'  && <TabDashboard data={data} onRefresh={cargarTodo} autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh} />}
       {tab === 'alertas'    && <TabAlertas alertas={alertas} onEvaluar={evaluar} onAtender={atender} onResolver={resolver} onDescartar={descartar} evaluando={evaluando} />}
+      {tab === 'comercial'  && <TabComercial insights={insights} onRefresh={recargarInsights} cargando={insightsCargando} />}
       {tab === 'supervisor' && <TabSupervisor resumen={resumen} onRefresh={cargarTodo} />}
       {tab === 'scoring'    && <TabScoring scoring={scoring} onSnapshot={snapshot} snapping={snapping} />}
       {tab === 'diesel'     && <TabDiesel baselines={baselines} onRecomputar={recomputarBaselines} recomputando={recomputando} />}

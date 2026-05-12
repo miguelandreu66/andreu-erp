@@ -173,4 +173,12 @@ export const api = {
   caiDieselBaselines: ()       => req('GET',  '/command-ai/diesel/baselines'),
   caiDieselRecomputar:()       => req('POST', '/command-ai/diesel/recomputar', {}),
   caiDieselForense:   (id, dias=30) => req('GET', `/command-ai/diesel/forense/${id}?dias=${dias}`),
+
+  // Comercial IA
+  caiInsightsAll:        ()    => req('GET', '/command-ai/insights/all'),
+  caiBriefing:           ()    => req('GET', '/command-ai/insights/briefing'),
+  caiCobranzaVencida:    ()    => req('GET', '/command-ai/insights/cobranza-vencida'),
+  caiClientesRiesgo:     (d=60)=> req('GET', `/command-ai/insights/clientes-riesgo?dias=${d}`),
+  caiCotizacionesPend:   ()    => req('GET', '/command-ai/insights/cotizaciones-pendientes'),
+  caiPreciosRuta:        ()    => req('GET', '/command-ai/insights/precios-ruta'),
 };

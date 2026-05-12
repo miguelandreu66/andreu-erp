@@ -38,10 +38,11 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Dashboard />} />
-            <Route path="caja" element={<PrivateRoute roles={['director','admin','caja']}><Caja /></PrivateRoute>} />
+            {/* Legacy FerreExpress — solo Director, modo consulta histórica */}
+            <Route path="caja" element={<PrivateRoute roles={['director']}><Caja /></PrivateRoute>} />
+            <Route path="inventario" element={<PrivateRoute roles={['director']}><Inventario /></PrivateRoute>} />
             <Route path="flota" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Flota /></PrivateRoute>} />
             <Route path="gastos" element={<PrivateRoute roles={['director','admin','caja','logistica']}><Gastos /></PrivateRoute>} />
-            <Route path="inventario" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Inventario /></PrivateRoute>} />
             <Route path="nomina" element={<PrivateRoute roles={['director','admin']}><Nomina /></PrivateRoute>} />
             <Route path="clientes" element={<PrivateRoute roles={['director','admin','caja']}><Clientes /></PrivateRoute>} />
             <Route path="cxc"      element={<PrivateRoute roles={['director','admin','caja']}><CXC /></PrivateRoute>} />
