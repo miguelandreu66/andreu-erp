@@ -209,6 +209,9 @@ export const api = {
   opDocsEliminar:         (id)      => req('DELETE', `/operadores/documentos/${id}`),
   opDocsAlertasVigencia:  ()        => req('GET', '/operadores/documentos/alertas-vigencia'),
 
+  // Onboarding / setup status
+  caiSetupStatus: ()          => req('GET', '/command-ai/setup-status'),
+
   // Cron / automatizaciones
   cronEstado:    ()           => req('GET', '/command-ai/cron/estado'),
   cronHistorial: (limit=50)   => req('GET', `/command-ai/cron/historial?limit=${limit}`),
