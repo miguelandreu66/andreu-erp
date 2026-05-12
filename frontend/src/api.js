@@ -209,6 +209,11 @@ export const api = {
   opDocsEliminar:         (id)      => req('DELETE', `/operadores/documentos/${id}`),
   opDocsAlertasVigencia:  ()        => req('GET', '/operadores/documentos/alertas-vigencia'),
 
+  // Cron / automatizaciones
+  cronEstado:    ()           => req('GET', '/command-ai/cron/estado'),
+  cronHistorial: (limit=50)   => req('GET', `/command-ai/cron/historial?limit=${limit}`),
+  cronDisparar:  (nombre)     => req('POST', `/command-ai/cron/disparar/${nombre}`, {}),
+
   // Comercial IA
   caiInsightsAll:        ()    => req('GET', '/command-ai/insights/all'),
   caiBriefing:           ()    => req('GET', '/command-ai/insights/briefing'),

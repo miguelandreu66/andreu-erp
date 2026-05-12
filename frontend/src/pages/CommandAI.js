@@ -501,6 +501,130 @@ const rowInsight = {
 };
 
 // ══════════════════════════════════════════════════════════════════
+function TabAutomatizaciones() {
+  const [estado, setEstado] = useState(null);
+  const [historial, setHistorial] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [disparando, setDisparando] = useState(null);
+
+  const cargar = useCallback(async () => {
+    setCargando(true);
+    try {
+      const [e, h] = await Promise.all([
+        api.cronEstado(),
+        api.cronHistorial(50).catch(() => []),
+      ]);
+      setEstado(e); setHistorial(h);
+    } catch (err) { console.error(err); }
+    finally { setCargando(false); }
+  }, []);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const disparar = async (nombre) => {
+    setDisparando(nombre);
+    try {
+      const r = await api.cronDisparar(nombre);
+      alert(`✓ ${nombre} ejecutado en ${r.duracion_ms}ms\n\n${JSON.stringify(r.resultado, null, 2)}`);
+      await cargar();
+    } catch (e) {
+      alert('Error: ' + e.message);
+    } finally { setDisparando(null); }
+  };
+
+  const SCHEDULES_HUMANOS = {
+    '*/5 * * * *': 'Cada 5 minutos',
+    '0 6 * * *': 'Diario 6:00 AM (MX)',
+    '0 8 * * *': 'Diario 8:00 AM (MX)',
+    '0 3 * * 1': 'Lunes 3:00 AM (MX)',
+  };
+
+  if (cargando) return <div>Cargando...</div>;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <h3 style={{ margin: 0 }}>⚙️ Automatizaciones</h3>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>
+            El sistema corre estos jobs solo. Puedes dispararlos manualmente para probarlos.
+          </p>
+        </div>
+        <button onClick={cargar} style={btnSecondary}>↻ Refrescar</button>
+      </div>
+
+      <div style={{ display: 'grid', gap: 12, marginBottom: 24 }}>
+        {(estado || []).map(j => (
+          <div key={j.nombre} style={{
+            background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 14,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+          }}>
+            <div style={{ flex: 1, minWidth: 250 }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>
+                {j.activo && <span style={{ color: '#16a34a' }}>● </span>}
+                {j.nombre.replace(/_/g, ' ').toUpperCase()}
+              </div>
+              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                {SCHEDULES_HUMANOS[j.schedule] || j.schedule} · {j.descripcion}
+              </div>
+            </div>
+            <button
+              onClick={() => disparar(j.nombre)}
+              disabled={disparando === j.nombre}
+              style={btnPrimary}
+            >
+              {disparando === j.nombre ? 'Ejecutando...' : '▶ Ejecutar ahora'}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <h3 style={{ margin: '0 0 12px' }}>📜 Historial reciente</h3>
+      {historial.length === 0 ? (
+        <div style={{ padding: 20, background: '#f9fafb', borderRadius: 10, color: '#6b7280', fontSize: 13 }}>
+          Sin ejecuciones aún. Los jobs empezarán a aparecer aquí conforme se ejecuten.
+        </div>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: '#f9fafb', textAlign: 'left' }}>
+                <th style={th}>Cuándo</th>
+                <th style={th}>Job</th>
+                <th style={th}>Fuente</th>
+                <th style={th}>Resultado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {historial.map(h => {
+                const ok = h.detalle?.resultado && !h.detalle?.error;
+                return (
+                  <tr key={h.id} style={{ borderTop: '1px solid #f3f4f6' }}>
+                    <td style={td}>{new Date(h.created_at).toLocaleString('es-MX')}</td>
+                    <td style={td}>
+                      <span style={{ fontWeight: 600 }}>{h.accion.replace('cron_', '').replace('_manual', '')}</span>
+                      {h.accion.endsWith('_manual') && (
+                        <span style={{ marginLeft: 6, fontSize: 11, background: '#dbeafe', color: '#1e3a8a', padding: '1px 6px', borderRadius: 4 }}>manual</span>
+                      )}
+                    </td>
+                    <td style={td}>{h.ip || '—'}</td>
+                    <td style={td}>
+                      {ok
+                        ? <span style={{ color: '#16a34a' }}>✓ OK {h.detalle?.resultado?.duracion_ms ? `(${h.detalle.resultado.duracion_ms}ms)` : ''}</span>
+                        : <span style={{ color: '#dc2626' }}>✗ {h.detalle?.error || 'Sin datos'}</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
 export default function CommandAI() {
   const [tab,        setTab]        = useState('dashboard');
   const [data,       setData]       = useState(null);
@@ -603,12 +727,13 @@ export default function CommandAI() {
   const totalAlertasCriticas = alertas.filter(a => a.nivel === 'critico').length;
 
   const tabs = [
-    { id: 'dashboard',  label: 'Dashboard',     icon: '📊' },
-    { id: 'alertas',    label: `Alertas${totalAlertasCriticas ? ` (${totalAlertasCriticas})` : ''}`, icon: '🚨' },
-    { id: 'comercial',  label: 'Comercial IA',  icon: '🧠' },
-    { id: 'supervisor', label: 'Supervisor IA', icon: '🤖' },
-    { id: 'scoring',    label: 'Scoring',       icon: '⭐' },
-    { id: 'diesel',     label: 'Diesel forense', icon: '⛽' },
+    { id: 'dashboard',     label: 'Dashboard',       icon: '📊' },
+    { id: 'alertas',       label: `Alertas${totalAlertasCriticas ? ` (${totalAlertasCriticas})` : ''}`, icon: '🚨' },
+    { id: 'comercial',     label: 'Comercial IA',    icon: '🧠' },
+    { id: 'supervisor',    label: 'Supervisor IA',   icon: '🤖' },
+    { id: 'scoring',       label: 'Scoring',         icon: '⭐' },
+    { id: 'diesel',        label: 'Diesel forense',  icon: '⛽' },
+    { id: 'automatizaciones', label: 'Automatizaciones', icon: '⚙️' },
   ];
 
   return (
@@ -636,6 +761,7 @@ export default function CommandAI() {
       {tab === 'supervisor' && <TabSupervisor resumen={resumen} onRefresh={cargarTodo} />}
       {tab === 'scoring'    && <TabScoring scoring={scoring} onSnapshot={snapshot} snapping={snapping} />}
       {tab === 'diesel'     && <TabDiesel baselines={baselines} onRecomputar={recomputarBaselines} recomputando={recomputando} />}
+      {tab === 'automatizaciones' && <TabAutomatizaciones />}
     </div>
   );
 }

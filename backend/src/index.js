@@ -33,4 +33,7 @@ app.use('/api/operadores',    require('./routes/operadorDocumentos'));
 app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Andreu ERP' }));
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Andreu ERP Backend corriendo en puerto ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Andreu ERP Backend corriendo en puerto ${PORT}`);
+  require('./lib/cronJobs').iniciar();
+});
