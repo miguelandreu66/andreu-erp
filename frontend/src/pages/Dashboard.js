@@ -1,225 +1,255 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-const fmt = n => '$' + Math.round(n || 0).toLocaleString('es-MX');
-const fmtDate = d => { if (!d) return ''; const p = d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
+const fmt$ = n => '$' + Math.round(parseFloat(n) || 0).toLocaleString('es-MX');
+const fmtN = n => (parseFloat(n) || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 });
+
+const ROL_LABEL = {
+  director: 'Director',
+  admin: 'Administrador General',
+  logistica: 'Coordinador Operativo',
+  monitoreo: 'Monitoreo',
+  caja: 'Auxiliar Administrativo',
+};
 
 export default function Dashboard() {
   const { usuario } = useAuth();
-  const [data, setData] = useState(null);
-  const [ventasSemana, setVentasSemana] = useState([]);
-  const [rendimiento, setRendimiento] = useState([]);
+  const [dash, setDash] = useState(null);
+  const [briefing, setBriefing] = useState(null);
+  const [insights, setInsights] = useState(null);
+  const [kpisFlota, setKpisFlota] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [reporte, setReporte] = useState('');
-  const [copiado, setCopiado] = useState(false);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    cargar();
-    const interval = setInterval(cargar, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const cargar = async () => {
+  const cargar = useCallback(async () => {
+    setError(null);
     try {
-      const [dash, vs, rend] = await Promise.all([
-        api.dashboard(),
-        api.resumenSemana(),
-        api.rendimientoSemana(),
+      const [d, b, i, k] = await Promise.all([
+        api.caiDashboard().catch(() => null),
+        api.caiBriefing().catch(() => null),
+        api.caiInsightsAll().catch(() => null),
+        api.logisticaKpis('?periodo=mes').catch(() => null),
       ]);
-      setData(dash);
-      setVentasSemana(vs.por_dia?.map(d => ({ dia: fmtDate(d.fecha), ventas: parseFloat(d.total) })) || []);
-      setRendimiento(rend.operadores?.map(o => ({ operador: o.operador?.split(' ')[0] || o.operador, viajes: parseInt(o.completados), meta: 5 })) || []);
+      setDash(d); setBriefing(b); setInsights(i); setKpisFlota(k);
     } catch (e) {
       console.error(e);
+      setError(e.message || 'Error al cargar dashboard');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const generarReporte = async () => {
-    const r = await api.reporteDia();
-    setReporte(r.texto);
-  };
+  useEffect(() => {
+    cargar();
+    const t = setInterval(cargar, 60000);
+    return () => clearInterval(t);
+  }, [cargar]);
 
-  const copiar = () => {
-    navigator.clipboard.writeText(reporte);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2000);
-  };
+  if (loading) return <div className="empty">Cargando panel operativo...</div>;
 
-  if (loading) return <div className="empty">Cargando dashboard...</div>;
-  if (!data) return <div className="empty">Error al cargar datos</div>;
+  const resumen = dash?.resumen || {};
+  const posiciones = dash?.posiciones || [];
+  const reportandoVivo = posiciones.filter(p => p.minutos_desde_ultimo != null && p.minutos_desde_ultimo <= 15).length;
+  const enRuta = posiciones.filter(p => p.estado_visual === 'en_ruta').length;
+  const sinSenal = posiciones.filter(p => p.estado_visual === 'sin_senal').length;
 
-  const pctViajes = Math.min(100, Math.round((data.viajes_semana / data.meta_viajes) * 100));
-  const pctNomina = Math.min(100, Math.round((data.nomina_semana / data.min_nomina) * 100));
+  const hoyTxt = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
     <div>
-      <div className="page-header">
-        <h2>Dashboard</h2>
-        <p>Bienvenido, {usuario?.nombre} · {fmtDate(data.hoy)}</p>
+      <div className="page-header" style={{ marginBottom: 16 }}>
+        <h2 style={{ margin: 0 }}>🚛 Andreu Logistics</h2>
+        <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 14 }}>
+          {hoyTxt} · {usuario?.nombre} · {ROL_LABEL[usuario?.rol] || usuario?.rol}
+        </p>
       </div>
 
-      {/* Alertas */}
-      <div style={{ marginBottom: 16 }}>
-        {data.alertas?.map((a, i) => (
-          <div key={i} className={`alert ${a.tipo}`}>
-            <div className="alert-dot" />
-            <div>{a.msg}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Métricas principales */}
-      <div className="metric-grid">
-        <div className="metric">
-          <div className="metric-label">Ventas hoy</div>
-          <div className="metric-value navy">{fmt(data.ventas_hoy)}</div>
-        </div>
-        <div className="metric">
-          <div className="metric-label">Ventas semana</div>
-          <div className="metric-value navy">{fmt(data.ventas_semana)}</div>
-        </div>
-        <div className="metric">
-          <div className="metric-label">Gastos hoy</div>
-          <div className="metric-value red">{fmt(data.gastos_hoy)}</div>
-        </div>
-        <div className="metric">
-          <div className="metric-label">Utilidad semana</div>
-          <div className={`metric-value ${data.utilidad_semana >= 0 ? 'green' : 'red'}`}>{fmt(data.utilidad_semana)}</div>
-        </div>
-        <div className="metric">
-          <div className="metric-label">Margen %</div>
-          <div className={`metric-value ${data.margen_semana >= 15 ? 'green' : data.margen_semana >= 10 ? 'orange' : 'red'}`}>{data.margen_semana}%</div>
-        </div>
-        <div className="metric">
-          <div className="metric-label">Viajes hoy</div>
-          <div className="metric-value orange">{data.viajes_hoy}</div>
-        </div>
-        <div className="metric">
-          <div className="metric-label">Viajes semana</div>
-          <div className="metric-value orange">{data.viajes_semana} / {data.meta_viajes}</div>
-        </div>
-        <div className="metric">
-          <div className="metric-label">Nómina semana</div>
-          <div className={`metric-value ${pctNomina >= 100 ? 'green' : 'orange'}`}>{fmt(data.nomina_semana)}</div>
-        </div>
-        <div className="metric">
-          <div className="metric-label">Por cobrar (CXC)</div>
-          <div className="metric-value" style={{ color: data.cxc_cuentas_vencidas > 0 ? '#dc2626' : '#1B3A6B' }}>
-            {fmt(data.cxc_total_por_cobrar)}
-          </div>
-          {data.cxc_cuentas_vencidas > 0 && (
-            <div style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }}>
-              {data.cxc_cuentas_vencidas} vencida(s)
-            </div>
-          )}
-        </div>
-        <div className="metric">
-          <div className="metric-label">Por pagar (CxP)</div>
-          <div className="metric-value" style={{ color: data.cxp_proximas_a_vencer > 0 ? '#d97706' : '#1B3A6B' }}>
-            {fmt(data.cxp_total_por_pagar)}
-          </div>
-          {data.cxp_proximas_a_vencer > 0 && (
-            <div style={{ fontSize: 11, color: '#d97706', fontWeight: 600 }}>
-              {data.cxp_proximas_a_vencer} vence(n) esta semana
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {/* Meta flota */}
-        <div className="card">
-          <div className="card-title">Meta flota semanal</div>
-          <div className="flex-between" style={{ marginBottom: 6, fontSize: 13 }}>
-            <span>Viajes completados</span>
-            <span style={{ fontWeight: 600 }}>{data.viajes_semana} / {data.meta_viajes}</span>
-          </div>
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: pctViajes + '%', background: pctViajes >= 80 ? '#639922' : pctViajes >= 50 ? '#E87722' : '#1B3A6B' }} />
-          </div>
-          <div className="text-muted mt-8">{pctViajes}% de la meta</div>
-        </div>
-
-        {/* Nómina */}
-        <div className="card">
-          <div className="card-title">Nómina mínima semanal</div>
-          <div className="flex-between" style={{ marginBottom: 6, fontSize: 13 }}>
-            <span>Cubierto</span>
-            <span style={{ fontWeight: 600 }}>{fmt(data.nomina_semana)} / $30,000</span>
-          </div>
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: pctNomina + '%', background: pctNomina >= 100 ? '#639922' : '#E87722' }} />
-          </div>
-          <div className="text-muted mt-8">{pctNomina}% cubierto</div>
-        </div>
-      </div>
-
-      {/* Ventas por día */}
-      {ventasSemana.length > 0 && (
-        <div className="card">
-          <div className="card-title">Ventas por día — semana actual</div>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={ventasSemana} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-              <XAxis dataKey="dia" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={v => '$' + (v/1000).toFixed(0) + 'k'} />
-              <Tooltip formatter={v => fmt(v)} />
-              <Bar dataKey="ventas" fill="#1B3A6B" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+      {error && (
+        <div style={{ background: '#fee2e2', border: '1px solid #dc2626', color: '#991b1b', padding: 12, borderRadius: 8, marginBottom: 16 }}>
+          ⚠️ {error}
         </div>
       )}
 
-      {/* Rendimiento operadores */}
-      {rendimiento.length > 0 && (
-        <div className="card">
-          <div className="card-title">Viajes por operador — semana</div>
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={rendimiento} layout="vertical" margin={{ top: 0, right: 20, left: 40, bottom: 0 }}>
-              <XAxis type="number" domain={[0, 5]} tick={{ fontSize: 11 }} />
-              <YAxis dataKey="operador" type="category" tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Bar dataKey="viajes" fill="#E87722" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+      {briefing && briefing.texto && (
+        <div style={{
+          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+          color: '#fff', padding: 22, borderRadius: 14, marginBottom: 20,
+          fontFamily: 'ui-monospace, "SF Mono", monospace', fontSize: 13, lineHeight: 1.7,
+          whiteSpace: 'pre-wrap',
+        }}>
+          {briefing.texto}
         </div>
       )}
 
-      {/* Inventario */}
-      <div className="card">
-        <div className="card-title">Estado de inventario</div>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Material</th><th>Existencia</th><th>Punto reorden</th><th>Estado</th></tr></thead>
-            <tbody>
-              {data.inventario?.map(inv => (
-                <tr key={inv.id}>
-                  <td style={{ fontWeight: 500 }}>{inv.producto}</td>
-                  <td>{inv.existencia} {inv.unidad}</td>
-                  <td>{inv.punto_reorden} {inv.unidad}</td>
-                  <td><span className={`badge ${parseFloat(inv.existencia) <= parseFloat(inv.punto_reorden) ? 'badge-red' : 'badge-green'}`}>{parseFloat(inv.existencia) <= parseFloat(inv.punto_reorden) ? 'Pedir' : 'OK'}</span></td>
+      <div className="metric-grid" style={{ marginBottom: 20 }}>
+        <KpiCard label="Viajes en ruta" value={enRuta} color="#16a34a" sub={`${reportandoVivo} unidad(es) reportando`} />
+        <KpiCard label="Unidades sin señal" value={sinSenal} color={sinSenal > 0 ? '#dc2626' : '#9ca3af'} sub={sinSenal > 0 ? 'Atención inmediata' : 'Todas conectadas'} />
+        <KpiCard label="Alertas críticas" value={resumen.alertas_criticas || 0} color={resumen.alertas_criticas > 0 ? '#dc2626' : '#16a34a'} sub={`${resumen.alertas_totales || 0} totales`} />
+        <KpiCard label="Diesel últimos 7d" value={fmt$(resumen.diesel_7d || 0)} color="#d97706" sub={`${fmtN(resumen.litros_7d || 0)} L`} />
+        <KpiCard label="Ingresos 30d" value={fmt$(briefing?.metricas?.ingresos_30d || 0)} color="#1B3A6B" sub={`${briefing?.metricas?.viajes_7d || 0} viajes últimos 7d`} />
+        <KpiCard label="Clientes activos" value={briefing?.metricas?.clientes_activos || 0} color="#1B3A6B" sub="En cartera" />
+      </div>
+
+      {kpisFlota && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-title">📡 KPIs de flota — mes actual</div>
+          <div className="metric-grid" style={{ marginTop: 8 }}>
+            <Mini label="Viajes completados" value={kpisFlota.viajes_completados || 0} />
+            <Mini label="KM totales" value={fmtN(kpisFlota.total_km || 0)} />
+            <Mini label="Toneladas movidas" value={fmtN(kpisFlota.total_toneladas || 0)} />
+            <Mini label="Rendimiento flota" value={(parseFloat(kpisFlota.rendimiento_flota || 0)).toFixed(2) + ' lt/km'} />
+            <Mini label="Costo / tonelada" value={fmt$(kpisFlota.costo_por_tonelada || 0)} />
+            <Mini label="Disponibilidad" value={(kpisFlota.pct_disponibilidad ?? 0) + '%'} />
+          </div>
+        </div>
+      )}
+
+      {insights && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 20 }}>
+          <QuickAlert icon="💳" color="#dc2626" label="Cobranza vencida"
+            value={insights.cobranza?.count || 0}
+            amount={insights.cobranza?.total_vencido ? fmt$(insights.cobranza.total_vencido) : null}
+            href="/cxc" />
+          <QuickAlert icon="⚠️" color="#d97706" label="Clientes en riesgo"
+            value={insights.riesgo?.count || 0}
+            amount=">60 días sin actividad"
+            href="/command-ai" />
+          <QuickAlert icon="📄" color="#2563eb" label="Cotizaciones sin convertir"
+            value={insights.cotizaciones?.count || 0}
+            amount={insights.cotizaciones?.total_potencial ? fmt$(insights.cotizaciones.total_potencial) + ' potencial' : null}
+            href="/cotizaciones" />
+          <QuickAlert icon="🤖" color="#16a34a" label="Centro de control"
+            value="Abrir" amount="Command AI en vivo" href="/command-ai" />
+        </div>
+      )}
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-title">🗺️ Flota en vivo — última posición</div>
+        {posiciones.length === 0 ? (
+          <div style={{ padding: 20, color: '#6b7280', fontSize: 14 }}>
+            Sin unidades registradas todavía. Da de alta tu flota en el módulo <strong>Unidades</strong> para verla aquí.
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Unidad</th>
+                  <th>Operador</th>
+                  <th>Estado</th>
+                  <th style={{ textAlign: 'right' }}>Velocidad</th>
+                  <th>Última señal</th>
+                  <th>Destino</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Reporte del día */}
-      <div className="card">
-        <div className="card-title">Reporte del día</div>
-        <p className="text-muted" style={{ marginBottom: 12 }}>Genera el resumen listo para enviar por WhatsApp</p>
-        <button className="btn btn-orange" onClick={generarReporte}>Generar reporte</button>
-        {reporte && (
-          <div style={{ marginTop: 12 }}>
-            <pre style={{ background: '#F4F4F2', borderRadius: 8, padding: 14, fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{reporte}</pre>
-            <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={copiar}>{copiado ? '✓ Copiado' : 'Copiar'}</button>
+              </thead>
+              <tbody>
+                {posiciones.map(p => (
+                  <tr key={p.unidad_id}>
+                    <td style={{ fontWeight: 600 }}>{p.placas}</td>
+                    <td>{p.operador || <span style={{ color: '#9ca3af' }}>Sin asignar</span>}</td>
+                    <td><EstadoBadge estado={p.estado_visual} /></td>
+                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                      {p.velocidad_kmh != null ? `${parseFloat(p.velocidad_kmh).toFixed(0)} km/h` : '—'}
+                    </td>
+                    <td>
+                      {p.minutos_desde_ultimo != null
+                        ? <span style={{ color: p.minutos_desde_ultimo > 15 ? '#dc2626' : '#16a34a', fontSize: 13 }}>
+                            hace {Math.round(p.minutos_desde_ultimo)} min
+                          </span>
+                        : <span style={{ color: '#9ca3af', fontSize: 13 }}>Sin GPS</span>}
+                    </td>
+                    <td>{p.destino || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
+
+      {kpisFlota && kpisFlota.viajes_completados > 0 && <TopOperadoresChart />}
+    </div>
+  );
+}
+
+function KpiCard({ label, value, color, sub }) {
+  return (
+    <div className="metric">
+      <div className="metric-label">{label}</div>
+      <div className="metric-value" style={{ color, marginTop: 4 }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function Mini({ label, value }) {
+  return (
+    <div style={{ background: '#f9fafb', padding: 12, borderRadius: 8 }}>
+      <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.4 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, marginTop: 2 }}>{value}</div>
+    </div>
+  );
+}
+
+function QuickAlert({ icon, color, label, value, amount, href }) {
+  return (
+    <a href={href} style={{
+      display: 'block', background: '#fff', border: `1px solid ${color}30`, borderLeft: `4px solid ${color}`,
+      borderRadius: 10, padding: 14, textDecoration: 'none', color: 'inherit',
+      transition: 'transform .1s', cursor: 'pointer',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ fontSize: 22 }}>{icon}</div>
+        <div style={{ fontSize: 24, fontWeight: 900, color, lineHeight: 1 }}>{value}</div>
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 600, marginTop: 8 }}>{label}</div>
+      {amount && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{amount}</div>}
+    </a>
+  );
+}
+
+function EstadoBadge({ estado }) {
+  const map = {
+    en_ruta:   { bg: '#16a34a', txt: 'En ruta' },
+    activa:    { bg: '#22c55e', txt: 'Activa' },
+    detenido:  { bg: '#6b7280', txt: 'Detenida' },
+    alerta:    { bg: '#dc2626', txt: 'Alerta' },
+    sin_senal: { bg: '#7c2d12', txt: 'Sin señal' },
+    sin_datos: { bg: '#9ca3af', txt: 'Sin GPS' },
+  };
+  const e = map[estado] || map.sin_datos;
+  return (
+    <span style={{
+      background: e.bg, color: '#fff', padding: '3px 10px',
+      borderRadius: 999, fontSize: 11, fontWeight: 600,
+    }}>{e.txt}</span>
+  );
+}
+
+function TopOperadoresChart() {
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    api.logisticaPorOperador('?periodo=mes').then(rows => {
+      setData((rows || []).filter(r => r.viajes > 0).slice(0, 5).map(r => ({
+        operador: r.operador?.split(' ')[0] || r.operador,
+        viajes: parseInt(r.viajes),
+      })));
+    }).catch(() => {});
+  }, []);
+  if (!data.length) return null;
+  return (
+    <div className="card">
+      <div className="card-title">🏆 Top operadores — mes actual</div>
+      <ResponsiveContainer width="100%" height={Math.max(160, data.length * 40)}>
+        <BarChart data={data} layout="vertical" margin={{ top: 0, right: 20, left: 60, bottom: 0 }}>
+          <XAxis type="number" tick={{ fontSize: 11 }} />
+          <YAxis dataKey="operador" type="category" tick={{ fontSize: 12 }} />
+          <Tooltip />
+          <Bar dataKey="viajes" fill="#E87722" radius={[0, 4, 4, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }
