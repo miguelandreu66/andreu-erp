@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -20,19 +21,21 @@ export default function Dashboard() {
   const [briefing, setBriefing] = useState(null);
   const [insights, setInsights] = useState(null);
   const [kpisFlota, setKpisFlota] = useState(null);
+  const [setup, setSetup] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const cargar = useCallback(async () => {
     setError(null);
     try {
-      const [d, b, i, k] = await Promise.all([
+      const [d, b, i, k, s] = await Promise.all([
         api.caiDashboard().catch(() => null),
         api.caiBriefing().catch(() => null),
         api.caiInsightsAll().catch(() => null),
         api.logisticaKpis('?periodo=mes').catch(() => null),
+        api.caiSetupStatus().catch(() => null),
       ]);
-      setDash(d); setBriefing(b); setInsights(i); setKpisFlota(k);
+      setDash(d); setBriefing(b); setInsights(i); setKpisFlota(k); setSetup(s);
     } catch (e) {
       console.error(e);
       setError(e.message || 'Error al cargar dashboard');
@@ -70,6 +73,10 @@ export default function Dashboard() {
         <div style={{ background: '#fee2e2', border: '1px solid #dc2626', color: '#991b1b', padding: 12, borderRadius: 8, marginBottom: 16 }}>
           ⚠️ {error}
         </div>
+      )}
+
+      {setup && !setup.onboarding_completo && (
+        <OnboardingWizard setup={setup} />
       )}
 
       {briefing && briefing.texto && (
@@ -225,6 +232,85 @@ function EstadoBadge({ estado }) {
       background: e.bg, color: '#fff', padding: '3px 10px',
       borderRadius: 999, fontSize: 11, fontWeight: 600,
     }}>{e.txt}</span>
+  );
+}
+
+function OnboardingWizard({ setup }) {
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, #E87722 0%, #d97706 100%)',
+      color: '#fff', padding: 24, borderRadius: 14, marginBottom: 20,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.9, letterSpacing: 1, textTransform: 'uppercase' }}>
+            ⚙️ Configuración inicial — Andreu Logistics
+          </div>
+          <h2 style={{ margin: '6px 0 4px', fontSize: 22 }}>
+            {setup.completion_pct}% completado · {setup.completos} de {setup.total} pasos
+          </h2>
+          <p style={{ margin: 0, opacity: 0.92, fontSize: 14 }}>
+            Termina estos pasos para que tu sistema cobre vida con datos reales.
+          </p>
+        </div>
+        <div style={{
+          fontSize: 48, fontWeight: 900, textAlign: 'center', lineHeight: 1,
+          background: 'rgba(255,255,255,.15)', padding: '12px 20px', borderRadius: 12,
+        }}>
+          {setup.completion_pct}%
+        </div>
+      </div>
+
+      <div style={{ background: 'rgba(255,255,255,.2)', height: 8, borderRadius: 4, marginBottom: 18, overflow: 'hidden' }}>
+        <div style={{
+          background: '#fff', height: '100%', width: setup.completion_pct + '%',
+          transition: 'width .5s ease',
+        }} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10 }}>
+        {setup.pasos.map((p, idx) => (
+          <Link
+            key={p.id}
+            to={p.ruta}
+            style={{
+              background: p.completo ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.15)',
+              border: '1px solid rgba(255,255,255,.3)',
+              borderRadius: 10, padding: 14, color: '#fff', textDecoration: 'none',
+              display: 'block', transition: 'transform .15s, background .15s',
+              cursor: 'pointer',
+              opacity: p.completo ? 0.8 : 1,
+            }}
+            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+              <span style={{ fontSize: 24 }}>{p.icono}</span>
+              <span style={{
+                fontSize: 11, fontWeight: 700,
+                background: p.completo ? '#16a34a' : 'rgba(0,0,0,.3)',
+                padding: '3px 8px', borderRadius: 999,
+              }}>
+                {p.completo ? '✓ Listo' : `Paso ${idx + 1}`}
+              </span>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{p.titulo}</div>
+            <div style={{ fontSize: 12, opacity: 0.92, lineHeight: 1.4 }}>{p.descripcion}</div>
+            {!p.completo && p.meta > 1 && (
+              <div style={{ fontSize: 11, marginTop: 8, opacity: 0.9 }}>
+                Progreso: {p.progreso}/{p.meta}
+              </div>
+            )}
+          </Link>
+        ))}
+      </div>
+
+      {setup.completion_pct === 80 && (
+        <div style={{ marginTop: 16, padding: 12, background: 'rgba(255,255,255,.2)', borderRadius: 8, fontSize: 13 }}>
+          🔥 ¡Casi listo! Un paso más y tu sistema queda configurado.
+        </div>
+      )}
+    </div>
   );
 }
 

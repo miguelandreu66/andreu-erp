@@ -412,6 +412,94 @@ router.get('/insights/all', auth(ROLES_LECTURA), async (_req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════
+// SETUP STATUS — onboarding progress
+// ══════════════════════════════════════════════════════════════════
+router.get('/setup-status', auth(ROLES_DASHBOARD), async (_req, res) => {
+  try {
+    const { rows: [r] } = await db.query(`
+      SELECT
+        (SELECT COUNT(*) FROM unidades WHERE activo = true)::int                                   AS unidades,
+        (SELECT COUNT(*) FROM operadores WHERE activo = true)::int                                 AS operadores,
+        (SELECT COUNT(*) FROM clientes WHERE activo = true)::int                                   AS clientes,
+        (SELECT COUNT(*) FROM viajes)::int                                                         AS viajes,
+        (SELECT COUNT(*) FROM unidad_documentos WHERE archivo_bytes IS NOT NULL)::int              AS docs_unidades,
+        (SELECT COUNT(*) FROM operador_documentos WHERE archivo_bytes IS NOT NULL)::int            AS docs_operadores,
+        (SELECT COUNT(*) FROM operador_documentos
+           WHERE tipo = 'licencia_federal' AND vigencia_fin IS NOT NULL)::int                      AS licencias_con_vigencia,
+        (SELECT COUNT(*) FROM gps_pings WHERE registrado_en >= NOW() - INTERVAL '24 hours')::int   AS pings_24h
+    `);
+
+    const pasos = [
+      {
+        id: 'unidades',
+        titulo: 'Da de alta tus unidades',
+        descripcion: 'Empieza con tus 3 plataformas. Sin unidades no se pueden registrar viajes.',
+        ruta: '/unidades',
+        icono: '🚛',
+        completo: r.unidades > 0,
+        progreso: Math.min(r.unidades, 3),
+        meta: 3,
+      },
+      {
+        id: 'operadores',
+        titulo: 'Registra a tus operadores',
+        descripcion: 'Nombre, teléfono y número de licencia federal de cada operador.',
+        ruta: '/operadores',
+        icono: '👤',
+        completo: r.operadores > 0,
+        progreso: Math.min(r.operadores, 3),
+        meta: 3,
+      },
+      {
+        id: 'docs_operadores',
+        titulo: 'Sube licencias federales',
+        descripcion: 'Licencia federal con su fecha de vencimiento. La IA te alertará antes que venza.',
+        ruta: '/operadores',
+        icono: '🪪',
+        completo: r.licencias_con_vigencia > 0,
+        progreso: r.licencias_con_vigencia,
+        meta: r.operadores || 1,
+      },
+      {
+        id: 'clientes',
+        titulo: 'Agrega tus clientes principales',
+        descripcion: 'Constructoras, distribuidoras y empresas a las que les das servicio.',
+        ruta: '/clientes',
+        icono: '👥',
+        completo: r.clientes > 0,
+        progreso: Math.min(r.clientes, 5),
+        meta: 5,
+      },
+      {
+        id: 'primer_viaje',
+        titulo: 'Registra tu primer viaje',
+        descripcion: 'Origen, destino, operador, unidad, diesel y km recorridos.',
+        ruta: '/registro-movil',
+        icono: '🚀',
+        completo: r.viajes > 0,
+        progreso: r.viajes > 0 ? 1 : 0,
+        meta: 1,
+      },
+    ];
+
+    const completos = pasos.filter(p => p.completo).length;
+    const completion_pct = Math.round((completos / pasos.length) * 100);
+
+    res.json({
+      pasos,
+      completos,
+      total: pasos.length,
+      completion_pct,
+      conteos: r,
+      onboarding_completo: completion_pct === 100,
+    });
+  } catch (e) {
+    console.error('setup-status:', e.message);
+    res.status(500).json({ error: 'Error al consultar estado de setup' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════
 // AUTOMATIZACIONES (cron jobs)
 // ══════════════════════════════════════════════════════════════════
 router.get('/cron/estado', auth(ROLES_LECTURA), (_req, res) => {
