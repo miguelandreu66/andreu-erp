@@ -10,6 +10,7 @@ const {
   cobranzaVencida, clientesEnRiesgo, cotizacionesPendientes,
   preciosPorRuta, briefingEjecutivo,
 } = require('../lib/commandAi/comercial');
+const cronJobs = require('../lib/cronJobs');
 
 // Roles con acceso al módulo Command AI
 const ROLES_LECTURA  = ['director','admin','logistica','monitoreo'];
@@ -411,10 +412,43 @@ router.get('/insights/all', auth(ROLES_LECTURA), async (_req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════
+// AUTOMATIZACIONES (cron jobs)
+// ══════════════════════════════════════════════════════════════════
+router.get('/cron/estado', auth(ROLES_LECTURA), (_req, res) => {
+  res.json(cronJobs.estado());
+});
+
+router.post('/cron/disparar/:job', auth(ROLES_ESCRITURA), async (req, res) => {
+  try {
+    const r = await cronJobs.disparar(req.params.job, req.usuario.id);
+    res.json(r);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.get('/cron/historial', auth(ROLES_LECTURA), async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+  try {
+    const { rows } = await db.query(`
+      SELECT id, accion, detalle, ip, created_at
+      FROM audit_log
+      WHERE accion LIKE 'cron_%'
+      ORDER BY created_at DESC
+      LIMIT $1
+    `, [limit]);
+    res.json(rows);
+  } catch (e) {
+    console.error('cron historial:', e.message);
+    res.status(500).json({ error: 'Error al consultar historial' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════
 // CONFIGURACIÓN — exponer umbrales para que el frontend los muestre
 // ══════════════════════════════════════════════════════════════════
 router.get('/config', auth(ROLES_LECTURA), (_req, res) => {
-  res.json({ umbrales: UMBRALES, version: '1.1.0' });
+  res.json({ umbrales: UMBRALES, version: '1.2.0' });
 });
 
 module.exports = router;
