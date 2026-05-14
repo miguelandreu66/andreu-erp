@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { api } from '../api';
+import { api, pdfUrl } from '../api';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -166,6 +166,8 @@ export default function Reportes() {
     setTimeout(() => setCopiado(false), 2000);
   };
 
+  const yyyymmActual = `${anio}-${String(mes).padStart(2,'0')}`;
+
   return (
     <div>
       <div className="page-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:8 }}>
@@ -179,6 +181,39 @@ export default function Reportes() {
             <button className="btn btn-primary btn-sm" onClick={recargarMes}>Aplicar</button>
           </div>
         )}
+      </div>
+
+      {/* Descargas PDF Premium */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1B3A6B 0%, #0f1f3a 100%)',
+        color: '#fff', padding: 20, borderRadius: 12, marginBottom: 20,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 14 }}>
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.85, letterSpacing: 1, textTransform: 'uppercase' }}>
+              📄 Reportes PDF — Andreu Logistics
+            </div>
+            <h3 style={{ margin: '4px 0 4px', fontSize: 18 }}>Descarga PDFs profesionales con tu marca</h3>
+            <p style={{ margin: 0, fontSize: 13, opacity: 0.85 }}>
+              Para mandar a tus clientes, archivar o presentar en juntas. Genera al momento.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <a
+              href={pdfUrl.flotaMes(yyyymmActual)}
+              target="_blank" rel="noopener noreferrer"
+              style={{
+                background: '#E87722', color: '#fff', padding: '10px 16px',
+                borderRadius: 8, textDecoration: 'none', fontWeight: 600, fontSize: 13,
+                display: 'inline-block',
+              }}
+            >📊 Reporte ejecutivo del mes</a>
+          </div>
+        </div>
+        <div style={{ marginTop: 10, fontSize: 11, opacity: 0.75 }}>
+          💡 Para descargar <strong>estado de cuenta por cliente</strong>, ve a la página de <strong>Clientes</strong>.
+          Para <strong>comprobante por viaje</strong>, ve a <strong>Viajes</strong> (próximamente).
+        </div>
       </div>
 
       {/* Tabs */}
