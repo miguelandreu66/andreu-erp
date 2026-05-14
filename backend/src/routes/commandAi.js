@@ -4,6 +4,7 @@ const auth   = require('../middleware/auth');
 
 const { evaluarReglas, persistirAlertas, UMBRALES } = require('../lib/commandAi/rules');
 const { generarResumen }    = require('../lib/commandAi/supervisor');
+const claudeSupervisor      = require('../lib/commandAi/claudeSupervisor');
 const { calcularScoring, guardarSnapshot } = require('../lib/commandAi/scoring');
 const { recomputarBaselines, listarBaselines, analisisForense } = require('../lib/commandAi/diesel');
 const {
@@ -282,10 +283,56 @@ router.put('/alertas/:id/descartar', auth(ROLES_ESCRITURA), async (req, res) => 
 router.get('/supervisor', auth(ROLES_LECTURA), async (_req, res) => {
   try {
     const resumen = await generarResumen();
-    res.json(resumen);
+    res.json({ ...resumen, llm_disponible: claudeSupervisor.isAvailable() });
   } catch (e) {
     console.error('supervisor:', e.message);
     res.status(500).json({ error: 'Error al generar resumen IA' });
+  }
+});
+
+// Disponibilidad del Claude (¿está configurado ANTHROPIC_API_KEY?)
+router.get('/supervisor/disponible', auth(ROLES_DASHBOARD), (_req, res) => {
+  res.json({
+    llm_disponible: claudeSupervisor.isAvailable(),
+    modelo: claudeSupervisor.MODELO,
+  });
+});
+
+// Chat conversacional con Claude (requiere ANTHROPIC_API_KEY)
+router.post('/supervisor/preguntar', auth(ROLES_LECTURA), async (req, res) => {
+  const { mensaje, historial } = req.body || {};
+  if (!mensaje || typeof mensaje !== 'string' || !mensaje.trim()) {
+    return res.status(400).json({ error: 'mensaje (string) requerido' });
+  }
+  if (!claudeSupervisor.isAvailable()) {
+    return res.status(503).json({
+      error: 'Supervisor IA conversacional no disponible. Configura ANTHROPIC_API_KEY en Railway para activarlo.',
+      llm_disponible: false,
+    });
+  }
+  try {
+    const r = await claudeSupervisor.preguntar({
+      mensaje: mensaje.slice(0, 4000),
+      historial: Array.isArray(historial) ? historial.slice(-20) : [], // safety: max 20 turnos de contexto
+    });
+
+    // Audit
+    try {
+      await db.query(`
+        INSERT INTO audit_log (usuario_id, accion, entidad, detalle, ip)
+        VALUES ($1, 'supervisor_preguntar', 'claude', $2, $3)
+      `, [req.usuario.id, {
+        iteraciones: r.iteraciones,
+        usage: r.usage,
+        stop_reason: r.stop_reason,
+        eventos: r.eventos,
+      }, req.ip]);
+    } catch (_) {}
+
+    res.json(r);
+  } catch (e) {
+    console.error('supervisor preguntar:', e.message);
+    res.status(500).json({ error: e.message });
   }
 });
 
