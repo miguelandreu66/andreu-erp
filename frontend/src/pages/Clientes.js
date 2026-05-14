@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../api';
+import { api, pdfUrl } from '../api';
 
 const fmt = n => '$' + Math.round(n || 0).toLocaleString('es-MX');
 const fmtDate = d => { if (!d) return '—'; const p = d.split('T')[0].split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
@@ -92,7 +92,16 @@ export default function Clientes() {
                       <td>{c.num_compras}</td>
                       <td style={{ fontWeight: 500, color: '#1B3A6B' }}>{fmt(c.total_compras)}</td>
                       <td className="text-muted">{fmtDate(c.ultima_compra)}</td>
-                      <td><button className="btn btn-ghost btn-sm" onClick={() => verDetalle(c.id)}>Ver</button></td>
+                      <td style={{ display: 'flex', gap: 4 }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => verDetalle(c.id)}>Ver</button>
+                        <a
+                          href={pdfUrl.estadoCuenta(c.id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-ghost btn-sm"
+                          title="Descargar estado de cuenta en PDF"
+                        >📄 PDF</a>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

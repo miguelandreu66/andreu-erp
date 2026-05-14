@@ -37,6 +37,19 @@ export const fileUrl = (path) => {
   return `${BASE}${path}${token ? `${sep}token=${encodeURIComponent(token)}` : ''}`;
 };
 
+// Helper para construir URLs de PDFs descargables
+export const pdfUrl = {
+  estadoCuenta:  (clienteId, desde, hasta) => {
+    const qs = new URLSearchParams();
+    if (desde) qs.set('desde', desde);
+    if (hasta) qs.set('hasta', hasta);
+    const q = qs.toString();
+    return fileUrl(`/reportes-pdf/estado-cuenta/${clienteId}${q ? '?' + q : ''}`);
+  },
+  viaje:         (viajeId)  => fileUrl(`/reportes-pdf/viaje/${viajeId}`),
+  flotaMes:      (yyyymm)   => fileUrl(`/reportes-pdf/flota-mes/${yyyymm}`),
+};
+
 export const api = {
   // Auth
   login: (email, password) => req('POST', '/auth/login', { email, password }),
