@@ -224,25 +224,204 @@ function TabAlertas({ alertas, onEvaluar, onAtender, onResolver, onDescartar, ev
 
 // ══════════════════════════════════════════════════════════════════
 function TabSupervisor({ resumen, onRefresh }) {
-  if (!resumen) return <div>Cargando...</div>;
+  const [llmDisponible, setLlmDisponible] = useState(resumen?.llm_disponible);
+  const [modo, setModo] = useState(resumen?.llm_disponible ? 'chat' : 'briefing');
+  const [mensajes, setMensajes] = useState([]); // [{role: 'user'|'assistant', text: '...'}]
+  const [input, setInput] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [errorChat, setErrorChat] = useState(null);
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (resumen?.llm_disponible !== undefined) setLlmDisponible(resumen.llm_disponible);
+  }, [resumen]);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [mensajes]);
+
+  const enviar = async () => {
+    const texto = input.trim();
+    if (!texto || enviando) return;
+    setErrorChat(null);
+    setEnviando(true);
+    const previo = [...mensajes];
+    setMensajes([...previo, { role: 'user', text: texto }]);
+    setInput('');
+    try {
+      const historialClaude = previo.map(m => ({
+        role: m.role,
+        content: m.text,
+      }));
+      const r = await api.caiSupervisorPreguntar(texto, historialClaude);
+      setMensajes(curr => [...curr, {
+        role: 'assistant',
+        text: r.respuesta,
+        usage: r.usage,
+        eventos: r.eventos,
+        iteraciones: r.iteraciones,
+      }]);
+    } catch (e) {
+      setErrorChat(e.message);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const sugerencias = [
+    '¿Cuál es el estado de la flota ahora?',
+    '¿Qué alertas críticas tengo pendientes?',
+    '¿Qué cliente debo cobrar primero?',
+    '¿Qué documentos vencen este mes?',
+    '¿Cuál es mi mejor operador?',
+    'Dame el resumen del día',
+  ];
+
+  if (!resumen) return <div>Cargando supervisor...</div>;
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
         <h3 style={{ margin: 0 }}>🤖 Supervisor IA</h3>
-        <button onClick={onRefresh} style={btnSecondary}>↻ Regenerar</button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={() => setModo('chat')}
+            style={{ ...btnSmall, background: modo === 'chat' ? '#1A1A1A' : '#fff', color: modo === 'chat' ? '#fff' : '#1A1A1A' }}>
+            💬 Chat IA
+          </button>
+          <button onClick={() => setModo('briefing')}
+            style={{ ...btnSmall, background: modo === 'briefing' ? '#1A1A1A' : '#fff', color: modo === 'briefing' ? '#fff' : '#1A1A1A' }}>
+            📋 Briefing
+          </button>
+          <button onClick={onRefresh} style={btnSecondary}>↻</button>
+        </div>
       </div>
-      <div style={{
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-        color: '#fff', padding: 24, borderRadius: 14,
-        fontFamily: 'ui-monospace, "SF Mono", monospace', fontSize: 14, lineHeight: 1.8,
-        whiteSpace: 'pre-wrap',
-      }}>
-        {resumen.texto}
-      </div>
-      <div style={{ marginTop: 16, fontSize: 12, color: '#6b7280' }}>
-        Fase 1: resumen determinístico generado desde reglas y queries del ERP.
-        Fase 2 (siguiente sprint): conexión a Claude API con tool-use para razonamiento profundo.
-      </div>
+
+      {modo === 'briefing' && (
+        <div style={{
+          background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+          color: '#fff', padding: 24, borderRadius: 14,
+          fontFamily: 'ui-monospace, "SF Mono", monospace', fontSize: 14, lineHeight: 1.8,
+          whiteSpace: 'pre-wrap',
+        }}>
+          {resumen.texto}
+        </div>
+      )}
+
+      {modo === 'chat' && !llmDisponible && (
+        <div style={{
+          background: '#fef3c7', border: '1px solid #d97706', color: '#78350f',
+          padding: 18, borderRadius: 12, fontSize: 14, lineHeight: 1.6,
+        }}>
+          <strong>⚠️ Chat IA no activado</strong>
+          <p style={{ margin: '8px 0' }}>
+            Para activar el supervisor IA conversacional con Claude, agrega tu API key de Anthropic
+            como variable de entorno <code>ANTHROPIC_API_KEY</code> en Railway (servicio andreu-erp).
+          </p>
+          <p style={{ margin: 0, fontSize: 13 }}>
+            Costo aproximado: ~$0.005 USD por consulta · Modelo: Claude Sonnet 4.6 con prompt caching.
+            <br />
+            Generar API key: <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>
+          </p>
+        </div>
+      )}
+
+      {modo === 'chat' && llmDisponible && (
+        <div>
+          <div ref={scrollRef} style={{
+            background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12,
+            padding: 16, height: 480, overflowY: 'auto', marginBottom: 12,
+          }}>
+            {mensajes.length === 0 ? (
+              <div>
+                <div style={{ textAlign: 'center', color: '#6b7280', padding: '40px 20px' }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>🤖</div>
+                  <h4 style={{ margin: '0 0 8px', color: '#374151' }}>Pregúntame lo que necesites</h4>
+                  <p style={{ fontSize: 13, marginBottom: 20 }}>
+                    Tengo acceso a tu flota, alertas, operadores, diesel, cobranza y documentos. Pregúntame.
+                  </p>
+                </div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8, fontWeight: 600 }}>Ejemplos:</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {sugerencias.map((s, i) => (
+                    <button key={i} onClick={() => setInput(s)} style={{
+                      background: '#fff', border: '1px solid #d1d5db', borderRadius: 999,
+                      padding: '6px 12px', fontSize: 12, cursor: 'pointer', color: '#374151',
+                    }}>{s}</button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              mensajes.map((m, i) => (
+                <div key={i} style={{
+                  display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
+                  marginBottom: 12,
+                }}>
+                  <div style={{
+                    maxWidth: '85%',
+                    background: m.role === 'user' ? '#1B3A6B' : '#fff',
+                    color: m.role === 'user' ? '#fff' : '#111',
+                    border: m.role === 'user' ? 'none' : '1px solid #e5e7eb',
+                    padding: '10px 14px',
+                    borderRadius: 12,
+                    whiteSpace: 'pre-wrap',
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                  }}>
+                    {m.text}
+                    {m.eventos && m.eventos.length > 0 && (
+                      <div style={{ marginTop: 8, fontSize: 11, color: m.role === 'user' ? '#cbd5e1' : '#9ca3af', borderTop: '1px solid ' + (m.role === 'user' ? '#3b5998' : '#e5e7eb'), paddingTop: 6 }}>
+                        🔍 Consultas: {m.eventos.map(e => e.nombre).join(', ')}
+                        {m.usage && (
+                          <span> · {(m.usage.input_tokens + m.usage.output_tokens).toLocaleString()} tokens
+                            {m.usage.cache_read_input_tokens > 0 && ` (${m.usage.cache_read_input_tokens} cache hit)`}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+            {enviando && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 12 }}>
+                <div style={{ background: '#fff', border: '1px solid #e5e7eb', padding: '10px 14px', borderRadius: 12, color: '#6b7280', fontSize: 13 }}>
+                  Pensando<span style={{ animation: 'pulse 1s infinite' }}>...</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {errorChat && (
+            <div style={{ background: '#fee2e2', color: '#991b1b', padding: 10, borderRadius: 8, marginBottom: 10, fontSize: 13 }}>
+              ⚠️ {errorChat}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } }}
+              placeholder="Pregúntale al supervisor IA..."
+              disabled={enviando}
+              style={{
+                flex: 1, padding: '12px 16px', fontSize: 14, borderRadius: 10,
+                border: '1px solid #d1d5db', outline: 'none',
+              }}
+            />
+            <button onClick={enviar} disabled={enviando || !input.trim()} style={btnPrimary}>
+              {enviando ? '...' : 'Enviar'}
+            </button>
+            {mensajes.length > 0 && (
+              <button onClick={() => setMensajes([])} style={btnSecondary} title="Limpiar conversación">🗑</button>
+            )}
+          </div>
+          <div style={{ marginTop: 8, fontSize: 11, color: '#9ca3af', textAlign: 'center' }}>
+            Claude Sonnet 4.6 · Las respuestas se generan consultando tu BD en vivo · Prompt caching activo
+          </div>
+        </div>
+      )}
     </div>
   );
 }

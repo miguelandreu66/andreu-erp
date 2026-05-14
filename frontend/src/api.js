@@ -186,6 +186,9 @@ export const api = {
   caiDashboard:       ()       => req('GET',  '/command-ai/dashboard'),
   caiConfig:          ()       => req('GET',  '/command-ai/config'),
   caiSupervisor:      ()       => req('GET',  '/command-ai/supervisor'),
+  caiSupervisorDisponible: ()  => req('GET',  '/command-ai/supervisor/disponible'),
+  caiSupervisorPreguntar: (mensaje, historial=[]) =>
+    req('POST', '/command-ai/supervisor/preguntar', { mensaje, historial }),
 
   caiGpsLatest:       ()       => req('GET',  '/command-ai/gps/latest'),
   caiGpsUnidad:       (id, p='') => req('GET', `/command-ai/gps/unidad/${id}${p}`),
