@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
+import MapaFlota from '../components/MapaFlota';
 
 const fmt$ = n => '$' + (parseFloat(n) || 0).toLocaleString('es-MX', { minimumFractionDigits: 0 });
 const fmtN = n => (parseFloat(n) || 0).toLocaleString('es-MX');
@@ -1198,6 +1199,7 @@ export default function CommandAI() {
 
   const tabs = [
     { id: 'dashboard',     label: 'Dashboard',       icon: '📊' },
+    { id: 'mapa',          label: 'Mapa',            icon: '🗺️' },
     { id: 'alertas',       label: `Alertas${totalAlertasCriticas ? ` (${totalAlertasCriticas})` : ''}`, icon: '🚨' },
     { id: 'comercial',     label: 'Comercial IA',    icon: '🧠' },
     { id: 'supervisor',    label: 'Supervisor IA',   icon: '🤖' },
@@ -1226,6 +1228,7 @@ export default function CommandAI() {
       <Tabs value={tab} onChange={setTab} items={tabs} />
 
       {tab === 'dashboard'  && <TabDashboard data={data} onRefresh={cargarTodo} autoRefresh={autoRefresh} setAutoRefresh={setAutoRefresh} />}
+      {tab === 'mapa'       && <MapaFlota />}
       {tab === 'alertas'    && <TabAlertas alertas={alertas} onEvaluar={evaluar} onAtender={atender} onResolver={resolver} onDescartar={descartar} evaluando={evaluando} />}
       {tab === 'comercial'  && <TabComercial insights={insights} onRefresh={recargarInsights} cargando={insightsCargando} />}
       {tab === 'supervisor' && <TabSupervisor resumen={resumen} onRefresh={cargarTodo} />}
