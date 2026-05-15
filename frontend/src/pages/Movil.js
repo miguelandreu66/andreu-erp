@@ -23,11 +23,6 @@ export default function Movil() {
   const watchIdRef = useRef(null);
   const ultimoEnviadoRef = useRef(0);
 
-  // OCR state
-  const [procesandoTicket, setProcesandoTicket] = useState(false);
-  const [resultadoOCR, setResultadoOCR] = useState(null);
-  const [errorOCR, setErrorOCR] = useState(null);
-
   const [msg, setMsg] = useState(null);
 
   // ── Cargar datos ──
@@ -138,30 +133,6 @@ export default function Movil() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gpsAuto, unidadId]);
-
-  // ── OCR ticket ──
-  const subirTicket = async (e) => {
-    const archivo = e.target.files[0];
-    if (!archivo) return;
-    if (archivo.size > 8 * 1024 * 1024) {
-      setErrorOCR('Imagen demasiado grande (máx 8 MB)');
-      return;
-    }
-    setProcesandoTicket(true);
-    setErrorOCR(null);
-    setResultadoOCR(null);
-    try {
-      const fd = new FormData();
-      fd.append('archivo', archivo);
-      const r = await api.caiDieselOcr(fd);
-      setResultadoOCR(r.datos);
-    } catch (e) {
-      setErrorOCR(e.message);
-    } finally {
-      setProcesandoTicket(false);
-      e.target.value = ''; // reset para que pueda subir otra
-    }
-  };
 
   // ── Render ──
   const unidadSeleccionada = unidades.find(u => u.id === parseInt(unidadId));
@@ -280,48 +251,9 @@ export default function Movil() {
         )}
       </Card>
 
-      {/* Foto ticket */}
-      <Card titulo="📸 Capturar ticket de diesel">
-        <label style={{ ...btnGrande('#E87722'), display: 'block', textAlign: 'center', cursor: 'pointer' }}>
-          {procesandoTicket ? '🤖 Leyendo ticket...' : '📷 Tomar foto del ticket'}
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={subirTicket}
-            disabled={procesandoTicket}
-            style={{ display: 'none' }}
-          />
-        </label>
-        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 6, textAlign: 'center' }}>
-          La IA extrae litros, precio y total automáticamente
-        </div>
-
-        {errorOCR && (
-          <div style={{ marginTop: 10, padding: 10, background: '#fee2e2', color: '#991b1b', borderRadius: 6, fontSize: 13 }}>
-            ⚠️ {errorOCR}
-          </div>
-        )}
-
-        {resultadoOCR && (
-          <div style={{ marginTop: 12, padding: 12, background: '#fff', border: '2px solid #16a34a', borderRadius: 8 }}>
-            <div style={{ fontSize: 11, color: '#166534', fontWeight: 700, marginBottom: 8 }}>
-              ✅ DATOS EXTRAÍDOS (confianza: {resultadoOCR.confianza})
-            </div>
-            <Linea k="Fecha" v={resultadoOCR.fecha} />
-            <Linea k="Combustible" v={resultadoOCR.tipo_combustible} />
-            <Linea k="Litros" v={resultadoOCR.litros != null ? `${resultadoOCR.litros} L` : null} />
-            <Linea k="Precio/L" v={resultadoOCR.precio_por_litro != null ? `$${resultadoOCR.precio_por_litro}` : null} />
-            <Linea k="Total" v={resultadoOCR.total != null ? `$${resultadoOCR.total.toLocaleString('es-MX')}` : null} bold />
-            <Linea k="Gasolinera" v={resultadoOCR.gasolinera_marca} />
-            {resultadoOCR.observaciones && (
-              <div style={{ marginTop: 8, fontSize: 11, color: '#6b7280', fontStyle: 'italic' }}>
-                💬 {resultadoOCR.observaciones}
-              </div>
-            )}
-          </div>
-        )}
-      </Card>
+      {/* Captura de tickets removida — Andreu usa tarjetas de flotilla (Edenred/IAVE).
+          Los movimientos de diesel y casetas llegan al sistema vía CSV/API,
+          no por captura manual del operador. */}
 
       {/* Viajes del día */}
       <Card titulo="🚛 Viajes recientes">
@@ -366,17 +298,6 @@ function Card({ titulo, children }) {
         {titulo}
       </div>
       {children}
-    </div>
-  );
-}
-
-function Linea({ k, v, bold }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 13 }}>
-      <span style={{ color: '#6b7280' }}>{k}</span>
-      <span style={{ fontWeight: bold ? 800 : 500, color: v ? (bold ? '#1B3A6B' : '#111') : '#9ca3af' }}>
-        {v || '—'}
-      </span>
     </div>
   );
 }

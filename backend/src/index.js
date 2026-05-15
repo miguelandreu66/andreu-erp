@@ -30,6 +30,7 @@ app.use('/api/command-ai',    require('./routes/commandAi'));
 app.use('/api',               require('./routes/unidadDocumentos'));
 app.use('/api/operadores',    require('./routes/operadorDocumentos'));
 app.use('/api/reportes-pdf',  require('./routes/reportesPdf'));
+app.use('/api/flotilla',      require('./routes/flotillaTarjetas'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Andreu ERP' }));
 
