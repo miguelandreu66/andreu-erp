@@ -22,6 +22,49 @@ const CLAVES_VALIDAS = {
     validador: v => typeof v === 'string' && v.startsWith('pk.') && v.length > 30,
     formato_esperado: 'pk.eyJ...',
   },
+  // ── Canales del Vendedor IA (Fase 16) ─────────────────────────
+  twilio_account_sid: {
+    label: 'Twilio Account SID',
+    descripcion: 'Vendedor IA — autenticación con Twilio (WhatsApp + SMS)',
+    env_var: 'TWILIO_ACCOUNT_SID',
+    validador: v => typeof v === 'string' && /^AC[a-f0-9]{32}$/.test(v),
+    formato_esperado: 'AC...32 hex chars',
+  },
+  twilio_auth_token: {
+    label: 'Twilio Auth Token',
+    descripcion: 'Vendedor IA — token secreto de Twilio',
+    env_var: 'TWILIO_AUTH_TOKEN',
+    validador: v => typeof v === 'string' && v.length >= 30 && v.length <= 64,
+    formato_esperado: 'string 30-64 chars',
+  },
+  twilio_whatsapp_from: {
+    label: 'Twilio WhatsApp From',
+    descripcion: 'Número WhatsApp de Andreu (sandbox o productivo)',
+    env_var: 'TWILIO_WHATSAPP_FROM',
+    validador: v => typeof v === 'string' && /^whatsapp:\+\d{10,15}$/.test(v),
+    formato_esperado: 'whatsapp:+5217771234567',
+  },
+  sendgrid_api_key: {
+    label: 'SendGrid API Key',
+    descripcion: 'Vendedor IA — envío de emails transaccionales',
+    env_var: 'SENDGRID_API_KEY',
+    validador: v => typeof v === 'string' && v.startsWith('SG.') && v.length > 30,
+    formato_esperado: 'SG....',
+  },
+  sendgrid_from_email: {
+    label: 'SendGrid From Email',
+    descripcion: 'Email remitente verificado en SendGrid (ej. ventas@andreulogistics.com)',
+    env_var: 'SENDGRID_FROM_EMAIL',
+    validador: v => typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+    formato_esperado: 'usuario@dominio.com',
+  },
+  sendgrid_from_name: {
+    label: 'SendGrid From Name',
+    descripcion: 'Nombre del remitente que ve el cliente en su bandeja',
+    env_var: 'SENDGRID_FROM_NAME',
+    validador: v => typeof v === 'string' && v.length >= 2 && v.length <= 100,
+    formato_esperado: 'Andreu Logistics — Ventas',
+  },
 };
 
 async function leer(clave) {

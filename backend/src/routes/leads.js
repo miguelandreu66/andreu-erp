@@ -3,6 +3,7 @@ const db = require('../db');
 const auth = require('../middleware/auth');
 const cotizador = require('../lib/cotizadorAI');
 const cotizacionPdf = require('../lib/reportes/cotizacionPdf');
+const vendedor = require('../lib/commandAi/vendedorIA');
 
 // ══════════════════════════════════════════════════════════════════
 // ENDPOINT PÚBLICO — sin login, expuesto al mundo
@@ -102,6 +103,12 @@ router.post('/cotizar', async (req, res) => {
       folio,
       cotizacion: cot,
       mensaje: '✅ Tu cotización está lista. Te contactaremos pronto.',
+    });
+
+    // ── Vendedor IA: dispara contacto automático en background ──
+    // Fire-and-forget (no bloquea el response al cliente público)
+    vendedor.procesarLeadNuevo(lead.id).catch(e => {
+      console.warn('[VendedorIA] procesarLeadNuevo falló:', e.message);
     });
   } catch (e) {
     console.error('cotizar:', e.message);

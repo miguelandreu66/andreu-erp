@@ -250,6 +250,17 @@ export const api = {
   transportistaDocArchivoUrl: (id)  => fileUrl(`/transportistas/documentos/${id}/archivo`),
   alertasVigenciaTransportistas: () => req('GET',    '/transportistas/documentos/alertas-vigencia'),
 
+  // Vendedor IA 24/7 (Fase 16)
+  vendedorDashboard:         ()                   => req('GET',  '/vendedor-ia/dashboard'),
+  vendedorConversaciones:    (params='')          => req('GET',  `/vendedor-ia/conversaciones${params}`),
+  vendedorConversacion:      (id)                 => req('GET',  `/vendedor-ia/conversaciones/${id}`),
+  vendedorEnviarMensaje:     (convId, contenido)  => req('POST', `/vendedor-ia/conversaciones/${convId}/mensaje`, { contenido }),
+  vendedorCambiarEstadoConv: (id, estado, notas)  => req('PUT',  `/vendedor-ia/conversaciones/${id}/estado`, { estado, notas }),
+  vendedorReenviarLead:      (leadId)             => req('POST', `/vendedor-ia/leads/${leadId}/reenviar`),
+  vendedorProcesarDrip:      ()                   => req('POST', '/vendedor-ia/drip/procesar'),
+  vendedorConfig:            ()                   => req('GET',  '/vendedor-ia/configuracion'),
+  vendedorGuardarConfig:     (body)               => req('PUT',  '/vendedor-ia/configuracion', body),
+
   // Auditor IA (Fase 15)
   auditorDashboard:      ()              => req('GET',  '/auditor-ia/dashboard'),
   auditorEjecuciones:    ()              => req('GET',  '/auditor-ia/ejecuciones'),
