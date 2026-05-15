@@ -22,6 +22,8 @@ const ROLES_LECTURA  = ['director','admin','logistica','monitoreo'];
 const ROLES_ESCRITURA = ['director','admin','logistica'];
 // Dashboard e insights comerciales: Auxiliar Administrativo (caja) también puede leer
 const ROLES_DASHBOARD = ['director','admin','logistica','monitoreo','caja'];
+// Operadores móviles: pueden ENVIAR sus propios GPS pings y subir tickets de diesel
+const ROLES_MOVIL = ['director','admin','logistica','operador'];
 
 // Helper: registrar acción en audit_log (no falla si no se puede)
 async function auditar(usuario_id, accion, entidad, entidad_id, detalle, ip) {
@@ -87,7 +89,7 @@ router.get('/dashboard', auth(ROLES_DASHBOARD), async (_req, res) => {
 // ══════════════════════════════════════════════════════════════════
 
 // POST /gps/ping — un solo ping (mobile o webhook GPS)
-router.post('/gps/ping', auth(ROLES_ESCRITURA), async (req, res) => {
+router.post('/gps/ping', auth(ROLES_MOVIL), async (req, res) => {
   const { unidad_id, viaje_id, lat, lng, velocidad_kmh, rumbo, odometro_km, fuente } = req.body;
   if (!unidad_id || lat == null || lng == null) {
     return res.status(400).json({ error: 'unidad_id, lat y lng son obligatorios' });
@@ -437,7 +439,7 @@ router.get('/scoring/historico/:operador_id', auth(ROLES_LECTURA), async (req, r
 // DIESEL INTELIGENTE
 // ══════════════════════════════════════════════════════════════════
 // OCR de ticket de combustible con Claude Vision
-router.post('/diesel/ocr', auth(ROLES_ESCRITURA), ocrUpload.single('archivo'), async (req, res) => {
+router.post('/diesel/ocr', auth(ROLES_MOVIL), ocrUpload.single('archivo'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No se recibió imagen del ticket' });
   if (!req.file.mimetype.startsWith('image/')) {
     return res.status(400).json({ error: 'El archivo debe ser una imagen (JPG, PNG, etc.)' });
