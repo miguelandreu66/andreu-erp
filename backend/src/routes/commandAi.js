@@ -389,7 +389,40 @@ router.post('/supervisor/preguntar', auth(ROLES_LECTURA), async (req, res) => {
     res.json(r);
   } catch (e) {
     console.error('supervisor preguntar:', e.message);
-    res.status(500).json({ error: e.message });
+
+    // Mapeo de errores conocidos de Anthropic a mensajes amigables en español
+    let mensajeUsuario = 'Ocurrió un error procesando tu pregunta. Intenta de nuevo.';
+    let statusHttp = 500;
+    let codigo = 'error_desconocido';
+
+    const msg = (e.message || '').toLowerCase();
+    if (e.status === 529 || msg.includes('overloaded')) {
+      mensajeUsuario = 'Claude está saturado en este momento (mucho tráfico en Anthropic). Espera ~30 seg y reintenta. El sistema reintenta automáticamente hasta 4 veces pero esta vez no fue suficiente.';
+      statusHttp = 503;
+      codigo = 'anthropic_saturado';
+    } else if (e.status === 429 || msg.includes('rate_limit')) {
+      mensajeUsuario = 'Tu cuenta Anthropic está en rate limit. Verifica créditos y plan en console.anthropic.com.';
+      statusHttp = 429;
+      codigo = 'rate_limit';
+    } else if (e.status === 401 || msg.includes('authentication')) {
+      mensajeUsuario = 'Tu API key de Anthropic ya no es válida. Genera una nueva y actualízala en Supervisor IA.';
+      statusHttp = 401;
+      codigo = 'api_key_invalida';
+    } else if (e.status === 403 || msg.includes('permission')) {
+      mensajeUsuario = 'Tu API key no tiene permisos para este modelo. Verifica tu cuenta Anthropic.';
+      statusHttp = 403;
+      codigo = 'sin_permisos';
+    } else if (e.status >= 500) {
+      mensajeUsuario = `Anthropic tuvo un error interno (${e.status}). Intenta de nuevo en unos segundos.`;
+      statusHttp = 502;
+      codigo = 'anthropic_error_interno';
+    }
+
+    res.status(statusHttp).json({
+      error: mensajeUsuario,
+      codigo,
+      reintentable: ['anthropic_saturado', 'anthropic_error_interno'].includes(codigo),
+    });
   }
 });
 

@@ -241,14 +241,11 @@ function TabSupervisor({ resumen, onRefresh }) {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [mensajes]);
 
-  const enviar = async () => {
-    const texto = input.trim();
+  const enviarTexto = async (texto, previo) => {
     if (!texto || enviando) return;
     setErrorChat(null);
     setEnviando(true);
-    const previo = [...mensajes];
     setMensajes([...previo, { role: 'user', text: texto }]);
-    setInput('');
     try {
       const historialClaude = previo.map(m => ({
         role: m.role,
@@ -263,10 +260,29 @@ function TabSupervisor({ resumen, onRefresh }) {
         iteraciones: r.iteraciones,
       }]);
     } catch (e) {
-      setErrorChat(e.message);
+      // Mensaje amigable (el backend ya devuelve mensajes en español)
+      setErrorChat({
+        mensaje: e.message,
+        ultimoMensaje: texto,
+        historialPrevio: previo,
+      });
     } finally {
       setEnviando(false);
     }
+  };
+
+  const enviar = async () => {
+    const texto = input.trim();
+    if (!texto) return;
+    setInput('');
+    await enviarTexto(texto, [...mensajes]);
+  };
+
+  const reintentar = async () => {
+    if (!errorChat) return;
+    const { ultimoMensaje, historialPrevio } = errorChat;
+    setErrorChat(null);
+    await enviarTexto(ultimoMensaje, historialPrevio);
   };
 
   const sugerencias = [
@@ -379,8 +395,18 @@ function TabSupervisor({ resumen, onRefresh }) {
           </div>
 
           {errorChat && (
-            <div style={{ background: '#fee2e2', color: '#991b1b', padding: 10, borderRadius: 8, marginBottom: 10, fontSize: 13 }}>
-              ⚠️ {errorChat}
+            <div style={{
+              background: '#fef3c7', color: '#78350f', padding: 12, borderRadius: 8,
+              marginBottom: 10, fontSize: 13, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap',
+            }}>
+              <span style={{ fontSize: 18 }}>⚠️</span>
+              <div style={{ flex: 1, minWidth: 200 }}>{errorChat.mensaje}</div>
+              <button onClick={reintentar} disabled={enviando} style={{
+                background: '#92400e', color: '#fff', border: 'none',
+                padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13,
+              }}>
+                {enviando ? 'Reintentando...' : '🔄 Reintentar'}
+              </button>
             </div>
           )}
 
