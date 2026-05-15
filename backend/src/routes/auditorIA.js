@@ -3,7 +3,8 @@ const db = require('../db');
 const auth = require('../middleware/auth');
 const auditor = require('../lib/commandAi/auditorIA');
 
-const ROLES_LECTURA = ['director','admin'];
+// Auditoría IA es exclusiva del director — contiene análisis estratégico sensible
+const ROLES_LECTURA = ['director'];
 const ROLES_EJECUCION = ['director'];
 
 // ──────────────────────────────────────────────
