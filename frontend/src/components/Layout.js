@@ -21,6 +21,7 @@ const NAV = [
   { to: '/flotilla',      label: 'Tarjetas y TAGs', icon: '💳', roles: ['director','admin','logistica','monitoreo','caja'] },
 
   // ── Comercial / Cobranza ──────────────────────────
+  { to: '/leads',        label: 'Leads (Cotizador)', icon: '🎯', roles: ['director','admin','caja'] },
   { to: '/clientes',     label: 'Clientes',     icon: '👥', roles: ['director','admin','caja'] },
   { to: '/cotizaciones', label: 'Cotizaciones', icon: '📄', roles: ['director','admin','caja'] },
   { to: '/cxc',          label: 'Por Cobrar',   icon: '💳', roles: ['director','admin','caja'] },

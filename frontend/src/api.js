@@ -203,6 +203,14 @@ export const api = {
   crucesTag:           (id, limit=100) => req('GET', `/flotilla/tags/${id}/cruces?limit=${limit}`),
   crearCruceTag:       (id, body)   => req('POST',   `/flotilla/tags/${id}/cruces`, body),
 
+  // Leads y cotizador
+  leadCotizarPublico:  (body)       => req('POST',   '/leads/cotizar', body),
+  leads:               (params='')  => req('GET',    `/leads${params}`),
+  detalleLead:         (id)         => req('GET',    `/leads/${id}`),
+  actualizarEstadoLead:(id, body)   => req('PUT',    `/leads/${id}/estado`, body),
+  convertirLeadCliente:(id, body)   => req('POST',   `/leads/${id}/convertir-cliente`, body),
+  eliminarLead:        (id)         => req('DELETE', `/leads/${id}`),
+
   // Command AI / Andreu Logistics
   caiDashboard:       ()       => req('GET',  '/command-ai/dashboard'),
   caiConfig:          ()       => req('GET',  '/command-ai/config'),
