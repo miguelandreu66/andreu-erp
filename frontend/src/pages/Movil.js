@@ -131,7 +131,6 @@ export default function Movil() {
         watchIdRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gpsAuto, unidadId]);
 
   // ── Render ──

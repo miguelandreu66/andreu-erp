@@ -81,7 +81,6 @@ export default function MapaFlota() {
       markersRef.current = {};
       trailsRef.current = {};
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   // ── 3. Cambiar estilo ──
@@ -93,7 +92,6 @@ export default function MapaFlota() {
         renderMarcadoresYTrails(posiciones);
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estilo]);
 
   // ── 4. Cargar posiciones ──
@@ -104,7 +102,6 @@ export default function MapaFlota() {
       setPosiciones(pos);
       renderMarcadoresYTrails(pos);
     } catch (e) { console.error('mapa posiciones:', e.message); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── 5. Renderizar marcadores ──
