@@ -14,6 +14,7 @@ const NAV = [
   { to: '/fiscal',         label: 'Facturación SAT', icon: '📄', roles: ['director','admin','caja'] },
   { to: '/asignador',      label: 'Asignador IA', icon: '🎯', roles: ['director','admin','logistica'] },
   { to: '/retencion',      label: 'Retención IA', icon: '🔄', roles: ['director','admin','caja'] },
+  { to: '/atraccion',      label: 'Atracción IA', icon: '🚀', roles: ['director','admin'] },
   { to: '/registro-movil', label: 'Registrar Viaje', icon: '🚛', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/movil',          label: 'Modo Móvil',      icon: '📱', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/logistica',      label: 'KPIs Flota',   icon: '📡', roles: ['director','admin','logistica','monitoreo'] },

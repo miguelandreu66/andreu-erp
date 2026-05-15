@@ -5,6 +5,7 @@ const cotizador = require('../lib/cotizadorAI');
 const cotizacionPdf = require('../lib/reportes/cotizacionPdf');
 const vendedor = require('../lib/commandAi/vendedorIA');
 const asignador = require('../lib/commandAi/asignadorIA');
+const tracking = require('../lib/marketing/tracking');
 
 // ══════════════════════════════════════════════════════════════════
 // ENDPOINT PÚBLICO — sin login, expuesto al mundo
@@ -15,6 +16,9 @@ router.post('/cotizar', async (req, res) => {
     contacto_nombre, empresa, rfc, email, telefono,
     origen, destino, toneladas, tipo_carga, fecha_solicitada,
     recurrencia, servicios_extras, hora_salida, comentarios,
+    // Tracking UTMs (Fase 20)
+    utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+    referrer, landing_path, session_id,
   } = req.body || {};
 
   // Validación básica
@@ -86,6 +90,28 @@ router.post('/cotizar', async (req, res) => {
       req.ip, (req.headers['user-agent'] || '').slice(0, 500), 'web_publico',
     ]);
 
+    // Guardar UTMs en el lead (tracking de canal)
+    if (utm_source || utm_medium || utm_campaign || referrer) {
+      try {
+        await db.query(`
+          UPDATE leads
+          SET utm_source = $1, utm_medium = $2, utm_campaign = $3,
+              utm_content = $4, utm_term = $5,
+              referrer = $6, landing_path = $7
+          WHERE id = $8
+        `, [
+          utm_source || null, utm_medium || null, utm_campaign || null,
+          utm_content || null, utm_term || null,
+          (referrer || '').slice(0, 1000), (landing_path || '').slice(0, 200),
+          lead.id,
+        ]);
+      } catch (_) {}
+    }
+    // Marcar visita como convertida
+    if (session_id) {
+      try { await tracking.marcarConvertida(session_id, lead.id); } catch (_) {}
+    }
+
     // Audit
     try {
       await db.query(`
@@ -95,6 +121,7 @@ router.post('/cotizar', async (req, res) => {
         folio, precio_final: cot.precio.total_con_iva,
         distancia_km: cot.ruta.distancia_km,
         margen_pct: cot.analisis.margen_pct,
+        utm_source, utm_campaign,
       }, req.ip]);
     } catch (_) {}
 
