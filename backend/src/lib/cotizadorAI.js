@@ -209,6 +209,22 @@ async function cotizar(input) {
   const margen_objetivo = cfg.cotizador_margen_objetivo_pct;
   const alerta_margen_bajo = margen_pct < margen_objetivo;
 
+  // 10. Determinar si es candidato a broker
+  // Si tipo_carga NO está en las capacidades de Andreu → broker
+  const capacidadesCarga = (cfg.andreu_capacidades_carga || 'general,fragil')
+    .split(',').map(s => s.trim().toLowerCase());
+  const tipoNormalizado = (input.tipo_carga || 'general').toLowerCase();
+  const tipo_operacion = capacidadesCarga.includes(tipoNormalizado) ? 'propio' : 'broker';
+
+  let analisis_broker = null;
+  if (tipo_operacion === 'broker') {
+    analisis_broker = {
+      motivo: `Andreu no opera carga de tipo "${tipoNormalizado}" con flota propia (solo: ${capacidadesCarga.join(', ')}).`,
+      sugerencia: 'Andreu actuará como broker, conectándote con un transportista especializado de nuestra red. Mismo precio para ti.',
+      markup_pct_andreu: cfg.broker_markup_default_pct || 15,
+    };
+  }
+
   return {
     ruta: {
       origen: origen_geo?.nombre || input.origen,
@@ -219,6 +235,8 @@ async function cotizar(input) {
       duracion_horas: Math.round(horas * 10) / 10,
       modelo: ruta.modelo,
     },
+    tipo_operacion,
+    analisis_broker,
     costos: {
       diesel: Math.round(costo_diesel),
       casetas: Math.round(costo_casetas),

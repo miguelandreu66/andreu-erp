@@ -2,6 +2,7 @@ const router = require('express').Router();
 const db = require('../db');
 const auth = require('../middleware/auth');
 const cotizador = require('../lib/cotizadorAI');
+const cotizacionPdf = require('../lib/reportes/cotizacionPdf');
 
 // ══════════════════════════════════════════════════════════════════
 // ENDPOINT PÚBLICO — sin login, expuesto al mundo
@@ -50,6 +51,7 @@ router.post('/cotizar', async (req, res) => {
         precio_base, precio_recargos, precio_descuentos, precio_extras, precio_final,
         costo_estimado, margen_pct,
         desglose, modelo_usado,
+        tipo_operacion,
         generado_por_ip, generado_por_ua, generado_por_origen
       ) VALUES (
         $1,$2,$3,$4,$5,$6,
@@ -61,9 +63,10 @@ router.post('/cotizar', async (req, res) => {
         $21,$22,$23,$24,$25,
         $26,$27,
         $28,$29,
-        $30,$31,$32
+        $30,
+        $31,$32,$33
       )
-      RETURNING id, folio, precio_final, created_at
+      RETURNING id, folio, precio_final, tipo_operacion, created_at
     `, [
       folio, contacto_nombre.trim(), empresa?.trim() || null, rfc?.trim() || null,
       email?.trim() || null, telefono?.trim() || null,
@@ -77,6 +80,7 @@ router.post('/cotizar', async (req, res) => {
       cot.precio.monto_extras, cot.precio.total_con_iva,
       cot.costos.total, cot.analisis.margen_pct,
       JSON.stringify(cot), cot.ruta.modelo,
+      cot.tipo_operacion || 'pendiente_decidir',
       req.ip, (req.headers['user-agent'] || '').slice(0, 500), 'web_publico',
     ]);
 
@@ -102,6 +106,20 @@ router.post('/cotizar', async (req, res) => {
   } catch (e) {
     console.error('cotizar:', e.message);
     res.status(500).json({ error: e.message || 'No pudimos generar tu cotización. Intenta de nuevo.' });
+  }
+});
+
+// PDF público de cotización por folio (sin login — el folio actúa como token)
+router.get('/pdf/:folio', async (req, res) => {
+  try {
+    const doc = await cotizacionPdf.generar(req.params.folio);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="cotizacion-${req.params.folio}.pdf"`,
+    });
+    doc.pipe(res);
+  } catch (e) {
+    res.status(404).json({ error: e.message });
   }
 });
 
@@ -244,6 +262,87 @@ router.post('/:id/convertir-cliente', auth(['director','admin']), async (req, re
     res.json({ ok: true, cliente, lead_folio: lead.folio });
   } catch (e) {
     console.error('convertir cliente:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Asignar transportista externo a un lead (workflow broker)
+router.post('/:id/asignar-transportista', auth(['director','admin']), async (req, res) => {
+  const { transportista_externo_id, precio_transportista } = req.body || {};
+  if (!transportista_externo_id || !precio_transportista) {
+    return res.status(400).json({ error: 'transportista_externo_id y precio_transportista requeridos' });
+  }
+  try {
+    const { rows: [lead] } = await db.query('SELECT precio_final FROM leads WHERE id = $1', [req.params.id]);
+    if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+
+    const precioCliente = parseFloat(lead.precio_final);
+    const precioTransp = parseFloat(precio_transportista);
+    const comision = precioCliente - precioTransp;
+
+    const { rows: [actualizado] } = await db.query(`
+      UPDATE leads
+      SET tipo_operacion = 'broker',
+          transportista_externo_id = $1,
+          precio_transportista = $2,
+          comision_andreu = $3,
+          updated_at = NOW()
+      WHERE id = $4
+      RETURNING *
+    `, [transportista_externo_id, precioTransp, comision, req.params.id]);
+
+    try {
+      await db.query(`
+        INSERT INTO audit_log (usuario_id, accion, entidad, entidad_id, detalle, ip)
+        VALUES ($1, 'lead_asignar_transportista', 'leads', $2, $3, $4)
+      `, [req.usuario.id, req.params.id, { transportista_externo_id, precio_transportista: precioTransp, comision }, req.ip]);
+    } catch (_) {}
+
+    res.json({
+      ok: true,
+      lead: actualizado,
+      analisis: {
+        precio_cliente: precioCliente,
+        precio_transportista: precioTransp,
+        comision_andreu: comision,
+        margen_broker_pct: ((comision / precioCliente) * 100).toFixed(1),
+      },
+    });
+  } catch (e) {
+    console.error('asignar-transportista:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Resumen del módulo broker (cartera, comisiones, ranking)
+router.get('/broker/resumen', auth(['director','admin']), async (_req, res) => {
+  try {
+    const { rows: [stats] } = await db.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE tipo_operacion = 'broker')::int                              AS leads_broker_total,
+        COUNT(*) FILTER (WHERE tipo_operacion = 'broker' AND estado = 'ganado')::int        AS leads_broker_ganados,
+        COALESCE(SUM(comision_andreu) FILTER (WHERE tipo_operacion = 'broker' AND estado = 'ganado'), 0)::float AS comisiones_total,
+        COALESCE(SUM(comision_andreu) FILTER (
+          WHERE tipo_operacion = 'broker' AND estado = 'ganado'
+            AND created_at >= date_trunc('month', CURRENT_DATE)
+        ), 0)::float                                                                         AS comisiones_mes
+      FROM leads
+    `);
+    const { rows: top } = await db.query(`
+      SELECT t.id, t.razon_social, t.calificacion,
+             COUNT(l.id)::int AS leads_asignados,
+             COUNT(l.id) FILTER (WHERE l.estado = 'ganado')::int AS leads_ganados,
+             COALESCE(SUM(l.comision_andreu) FILTER (WHERE l.estado = 'ganado'), 0)::float AS comisiones
+      FROM transportistas_externos t
+      LEFT JOIN leads l ON l.transportista_externo_id = t.id
+      WHERE t.activo = true
+      GROUP BY t.id, t.razon_social, t.calificacion
+      ORDER BY comisiones DESC
+      LIMIT 10
+    `);
+    res.json({ stats, top_transportistas: top });
+  } catch (e) {
+    console.error('broker resumen:', e.message);
     res.status(500).json({ error: e.message });
   }
 });

@@ -210,6 +210,16 @@ export const api = {
   actualizarEstadoLead:(id, body)   => req('PUT',    `/leads/${id}/estado`, body),
   convertirLeadCliente:(id, body)   => req('POST',   `/leads/${id}/convertir-cliente`, body),
   eliminarLead:        (id)         => req('DELETE', `/leads/${id}`),
+  asignarTransportistaLead: (id, body) => req('POST', `/leads/${id}/asignar-transportista`, body),
+  brokerResumen:       ()           => req('GET',    '/leads/broker/resumen'),
+
+  // Transportistas externos (broker network)
+  transportistasExternos: ()        => req('GET',    '/transportistas'),
+  detalleTransportista: (id)        => req('GET',    `/transportistas/${id}`),
+  crearTransportista:  (body)       => req('POST',   '/transportistas', body),
+  actualizarTransportista: (id, body) => req('PUT',  `/transportistas/${id}`, body),
+  eliminarTransportista: (id)       => req('DELETE', `/transportistas/${id}`),
+  sugerirTransportistas: (leadId)   => req('GET',    `/transportistas/sugerir/${leadId}`),
 
   // Command AI / Andreu Logistics
   caiDashboard:       ()       => req('GET',  '/command-ai/dashboard'),

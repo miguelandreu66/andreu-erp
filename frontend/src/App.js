@@ -23,6 +23,7 @@ import Movil from './pages/Movil';
 import Flotilla from './pages/Flotilla';
 import CotizadorPublico from './pages/CotizadorPublico';
 import Leads from './pages/Leads';
+import Broker from './pages/Broker';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="operadores" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Operadores /></PrivateRoute>} />
             <Route path="flotilla" element={<PrivateRoute roles={['director','admin','logistica','monitoreo','caja']}><Flotilla /></PrivateRoute>} />
             <Route path="leads" element={<PrivateRoute roles={['director','admin','caja']}><Leads /></PrivateRoute>} />
+            <Route path="broker" element={<PrivateRoute roles={['director','admin']}><Broker /></PrivateRoute>} />
             <Route path="flota" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Flota /></PrivateRoute>} />
             <Route path="gastos" element={<PrivateRoute roles={['director','admin','caja','logistica']}><Gastos /></PrivateRoute>} />
             <Route path="nomina" element={<PrivateRoute roles={['director','admin']}><Nomina /></PrivateRoute>} />
