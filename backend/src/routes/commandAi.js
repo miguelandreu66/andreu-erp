@@ -345,6 +345,23 @@ router.post('/config/api-keys/:clave', auth(['director']), async (req, res) => {
 });
 
 // DELETE remover key
+// GET el valor de una key específica (para tokens públicos como Mapbox)
+// Solo se permite leer keys explícitamente marcadas como "public_safe"
+const KEYS_PUBLIC_SAFE = ['mapbox_public_token'];
+router.get('/config/api-keys/:clave/valor', auth(ROLES_DASHBOARD), async (req, res) => {
+  const { clave } = req.params;
+  if (!KEYS_PUBLIC_SAFE.includes(clave)) {
+    return res.status(403).json({ error: 'Esta clave no es de lectura pública' });
+  }
+  try {
+    const valor = await apiKeys.leer(clave);
+    if (!valor) return res.status(404).json({ error: 'Token no configurado todavía' });
+    res.json({ clave, valor });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.delete('/config/api-keys/:clave', auth(['director']), async (req, res) => {
   try {
     await apiKeys.eliminar(req.params.clave, req.usuario.id);

@@ -213,9 +213,10 @@ export const api = {
 
   // BYOK — API keys
   caiApiKeysDisponibilidad: () => req('GET', '/command-ai/config/api-keys'),
-  caiApiKeyGuardar: (clave, valor) =>
+  caiApiKeyValor:          (clave) => req('GET', `/command-ai/config/api-keys/${clave}/valor`),
+  caiApiKeyGuardar:        (clave, valor) =>
     req('POST', `/command-ai/config/api-keys/${clave}`, { valor }),
-  caiApiKeyEliminar: (clave) =>
+  caiApiKeyEliminar:       (clave) =>
     req('DELETE', `/command-ai/config/api-keys/${clave}`),
 
   caiGpsLatest:       ()       => req('GET',  '/command-ai/gps/latest'),
