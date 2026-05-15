@@ -19,6 +19,7 @@ import RegistroMovil from './pages/RegistroMovil';
 import CommandAI from './pages/CommandAI';
 import Unidades from './pages/Unidades';
 import Operadores from './pages/Operadores';
+import Movil from './pages/Movil';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -36,6 +37,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/movil" element={<PrivateRoute><Movil /></PrivateRoute>} />
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="unidades" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Unidades /></PrivateRoute>} />
