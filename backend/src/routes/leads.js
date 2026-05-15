@@ -267,6 +267,7 @@ router.post('/:id/convertir-cliente', auth(['director','admin']), async (req, re
 });
 
 // Asignar transportista externo a un lead (workflow broker)
+// FILTRO DE SEGURIDAD: bloquea si el transportista no está verificado o tiene docs vencidos
 router.post('/:id/asignar-transportista', auth(['director','admin']), async (req, res) => {
   const { transportista_externo_id, precio_transportista } = req.body || {};
   if (!transportista_externo_id || !precio_transportista) {
@@ -275,6 +276,34 @@ router.post('/:id/asignar-transportista', auth(['director','admin']), async (req
   try {
     const { rows: [lead] } = await db.query('SELECT precio_final FROM leads WHERE id = $1', [req.params.id]);
     if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+
+    // ── FILTRO ANTI-RIESGO ──
+    const { rows: [t] } = await db.query(`
+      SELECT t.id, t.razon_social, t.estado_verificacion, t.activo,
+             chk.tiene_docs_vencidos_criticos, chk.cumple_para_verificacion
+      FROM transportistas_externos t
+      LEFT JOIN transportistas_checklist chk ON chk.transportista_id = t.id
+      WHERE t.id = $1
+    `, [transportista_externo_id]);
+
+    if (!t) return res.status(404).json({ error: 'Transportista no encontrado' });
+    if (!t.activo) return res.status(403).json({
+      error: `Transportista "${t.razon_social}" está inactivo. No puede recibir leads.`,
+      codigo: 'TRANSP_INACTIVO',
+    });
+    if (t.estado_verificacion !== 'verificado') {
+      return res.status(403).json({
+        error: `Transportista "${t.razon_social}" no está verificado (estado: ${t.estado_verificacion}). Completa documentación y verifícalo antes de asignarle leads.`,
+        codigo: 'TRANSP_NO_VERIFICADO',
+        estado: t.estado_verificacion,
+      });
+    }
+    if (t.tiene_docs_vencidos_criticos) {
+      return res.status(403).json({
+        error: `Transportista "${t.razon_social}" tiene documentos críticos vencidos (Permiso SCT o Póliza de seguro). Renueva antes de asignar.`,
+        codigo: 'TRANSP_DOCS_VENCIDOS',
+      });
+    }
 
     const precioCliente = parseFloat(lead.precio_final);
     const precioTransp = parseFloat(precio_transportista);

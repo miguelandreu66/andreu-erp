@@ -32,7 +32,10 @@ app.use('/api/operadores',    require('./routes/operadorDocumentos'));
 app.use('/api/reportes-pdf',  require('./routes/reportesPdf'));
 app.use('/api/flotilla',      require('./routes/flotillaTarjetas'));
 app.use('/api/leads',         require('./routes/leads'));
+// Docs montado ANTES para que /config y /:id/documentos no choquen con /:id de transportistas
+app.use('/api/transportistas', require('./routes/transportistaDocumentos'));
 app.use('/api/transportistas', require('./routes/transportistas'));
+app.use('/api/broker-finanzas', require('./routes/brokerFinanzas'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Andreu ERP' }));
 

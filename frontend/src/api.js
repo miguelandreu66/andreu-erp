@@ -214,12 +214,41 @@ export const api = {
   brokerResumen:       ()           => req('GET',    '/leads/broker/resumen'),
 
   // Transportistas externos (broker network)
-  transportistasExternos: ()        => req('GET',    '/transportistas'),
+  transportistasExternos: (params='') => req('GET', `/transportistas${params}`),
   detalleTransportista: (id)        => req('GET',    `/transportistas/${id}`),
   crearTransportista:  (body)       => req('POST',   '/transportistas', body),
   actualizarTransportista: (id, body) => req('PUT',  `/transportistas/${id}`, body),
   eliminarTransportista: (id)       => req('DELETE', `/transportistas/${id}`),
   sugerirTransportistas: (leadId)   => req('GET',    `/transportistas/sugerir/${leadId}`),
+
+  // Filtro / Verificación de transportistas (Fase 13)
+  checklistTransportista: (id)      => req('GET',    `/transportistas/${id}/checklist`),
+  verificarTransportista: (id)      => req('PUT',    `/transportistas/${id}/verificar`),
+  rechazarTransportista:  (id, motivo) => req('PUT', `/transportistas/${id}/rechazar`, { motivo }),
+  suspenderTransportista: (id, motivo) => req('PUT', `/transportistas/${id}/suspender`, { motivo }),
+  reactivarTransportista: (id)      => req('PUT',    `/transportistas/${id}/reactivar`),
+  recalcularScoreTransportista: (id) => req('POST',  `/transportistas/${id}/recalcular-score`),
+
+  // Broker Finanzas (Fase 14)
+  brokerDashboard:        ()              => req('GET',    '/broker-finanzas/dashboard'),
+  brokerOperaciones:      ()              => req('GET',    '/broker-finanzas/operaciones'),
+  brokerConcentracion:    ()              => req('GET',    '/broker-finanzas/concentracion'),
+  brokerPagos:            (params='')     => req('GET',    `/broker-finanzas/pagos${params}`),
+  crearBrokerPago:        (body)          => req('POST',   '/broker-finanzas/pagos', body),
+  marcarBrokerPagoPagado: (id, body={})   => req('PUT',    `/broker-finanzas/pagos/${id}/marcar-pagado`, body),
+  cancelarBrokerPago:     (id, motivo)    => req('PUT',    `/broker-finanzas/pagos/${id}/cancelar`, { motivo }),
+  eliminarBrokerPago:     (id)            => req('DELETE', `/broker-finanzas/pagos/${id}`),
+  registrarCobroLead:     (leadId, body)  => req('POST',   `/broker-finanzas/leads/${leadId}/cobro`, body),
+  brokerConfig:           (body)          => req('PUT',    '/broker-finanzas/configuracion', body),
+
+  // Documentos de transportistas
+  transportistaDocsConfig: ()       => req('GET',    '/transportistas/config'),
+  transportistaDocs:    (id)        => req('GET',    `/transportistas/${id}/documentos`),
+  subirTransportistaDoc: (id, formData) => reqUpload(`/transportistas/${id}/documentos`, formData),
+  actualizarTransportistaDoc: (id, body) => req('PUT', `/transportistas/documentos/${id}`, body),
+  eliminarTransportistaDoc:   (id)  => req('DELETE', `/transportistas/documentos/${id}`),
+  transportistaDocArchivoUrl: (id)  => fileUrl(`/transportistas/documentos/${id}/archivo`),
+  alertasVigenciaTransportistas: () => req('GET',    '/transportistas/documentos/alertas-vigencia'),
 
   // Command AI / Andreu Logistics
   caiDashboard:       ()       => req('GET',  '/command-ai/dashboard'),
