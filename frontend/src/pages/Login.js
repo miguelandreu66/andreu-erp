@@ -15,8 +15,9 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
-      navigate('/');
+      const usuario = await login(email, password);
+      // Operadores van directo a la app móvil; los demás roles al dashboard
+      navigate(usuario?.rol === 'operador' ? '/movil' : '/');
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');
     } finally {

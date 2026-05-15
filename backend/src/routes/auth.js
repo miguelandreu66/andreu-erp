@@ -15,11 +15,11 @@ router.post('/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ error: 'Credenciales incorrectas' });
     const token = jwt.sign(
-      { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol },
+      { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, operador_id: user.operador_id || null },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
-    res.json({ token, usuario: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol } });
+    res.json({ token, usuario: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol, operador_id: user.operador_id || null } });
   } catch (e) {
     res.status(500).json({ error: 'Error de servidor' });
   }

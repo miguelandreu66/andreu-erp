@@ -26,6 +26,7 @@ const COLOR_VIGENCIA = {
 export default function Operadores() {
   const { usuario } = useAuth();
   const puedeEditar = ['director','admin','logistica'].includes(usuario?.rol);
+  const esDirector = usuario?.rol === 'director';
 
   const [operadores, setOperadores] = useState([]);
   const [docCounts, setDocCounts] = useState({});
@@ -34,6 +35,7 @@ export default function Operadores() {
   const [form, setForm] = useState({ nombre: '', telefono: '', licencia: '' });
   const [guardando, setGuardando] = useState(false);
   const [opAbierto, setOpAbierto] = useState(null);
+  const [creandoAcceso, setCreandoAcceso] = useState(null); // operador para crear acceso
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -123,6 +125,7 @@ export default function Operadores() {
                   operador={o}
                   docCount={docCounts[o.id] || { total: 0, vencidos: 0, por_vencer: 0 }}
                   onOpenDocs={() => setOpAbierto(o)}
+                  onCrearAcceso={esDirector ? () => setCreandoAcceso(o) : null}
                 />
               ))}
             </div>
@@ -151,11 +154,127 @@ export default function Operadores() {
           onClose={() => { setOpAbierto(null); cargar(); }}
         />
       )}
+
+      {creandoAcceso && (
+        <ModalCrearAcceso
+          operador={creandoAcceso}
+          onClose={() => setCreandoAcceso(null)}
+          onCreado={() => { setCreandoAcceso(null); setMsg({ tipo: 'green', txt: `✓ Acceso creado para ${creandoAcceso.nombre}` }); }}
+        />
+      )}
     </div>
   );
 }
 
-function OperadorCard({ operador, docCount, onOpenDocs }) {
+function ModalCrearAcceso({ operador, onClose, onCreado }) {
+  const [email, setEmail] = useState(() =>
+    `${operador.nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '')}@andreu-logistics.com`
+  );
+  const [password, setPassword] = useState('Andreu2026!');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState(null);
+  const [exitoso, setExitoso] = useState(null);
+
+  const crear = async () => {
+    setError(null);
+    setGuardando(true);
+    try {
+      const r = await api.opCrearAcceso(operador.id, email.trim(), password);
+      setExitoso(r);
+    } catch (e) {
+      setError(e.message);
+    } finally { setGuardando(false); }
+  };
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: '#fff', borderRadius: 14, maxWidth: 480, width: '100%',
+        padding: 24,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 18 }}>🔑 Crear acceso de usuario</h2>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>Para {operador.nombre}</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#6b7280' }}>×</button>
+        </div>
+
+        {!exitoso ? (
+          <>
+            <p style={{ fontSize: 13, color: '#374151', marginBottom: 16 }}>
+              Esto crea un usuario con rol <strong>operador</strong> vinculado a este perfil. El operador podrá entrar a <code>/movil</code> con estas credenciales.
+            </p>
+
+            <div className="form-group">
+              <label className="form-label">Email (login)</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Contraseña temporal</label>
+              <input type="text" value={password} onChange={e => setPassword(e.target.value)}
+                style={{ fontFamily: 'ui-monospace, "SF Mono", monospace' }} />
+              <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+                Diéle al operador que la cambie desde Configuración cuando entre.
+              </div>
+            </div>
+
+            {error && (
+              <div style={{ background: '#fee2e2', color: '#991b1b', padding: 10, borderRadius: 6, marginBottom: 10, fontSize: 13 }}>
+                ⚠️ {error}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button onClick={crear} disabled={guardando || !email || !password} className="btn btn-primary">
+                {guardando ? 'Creando...' : 'Crear acceso'}
+              </button>
+              <button onClick={onClose} className="btn btn-ghost">Cancelar</button>
+            </div>
+          </>
+        ) : (
+          <div>
+            <div style={{ background: '#dcfce7', color: '#166534', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 14 }}>
+              ✅ Usuario <strong>{exitoso.usuario.nombre}</strong> creado.
+            </div>
+            <div style={{ background: '#f0f9ff', border: '1px solid #1B3A6B', borderRadius: 10, padding: 16, marginBottom: 12, fontSize: 13 }}>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>📋 Cópiale esto al operador por WhatsApp:</div>
+              <div style={{ background: '#fff', padding: 12, borderRadius: 6, fontFamily: 'ui-monospace, "SF Mono", monospace', fontSize: 12, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+{`Hola ${operador.nombre}, te paso tu acceso a la app:
+
+🔗 https://perfect-simplicity-production.up.railway.app/movil
+
+📧 ${exitoso.usuario.email}
+🔒 ${password}
+
+Cómo instalarla:
+1. Abre el link en Chrome
+2. Login con email y contraseña arriba
+3. Menú → "Agregar a pantalla de inicio"
+4. Listo, queda como app
+
+Al subir al camión: abre la app, escoge tu unidad, activa Auto-GPS.`}
+              </div>
+              <button
+                onClick={() => navigator.clipboard.writeText(
+                  `Hola ${operador.nombre}, te paso tu acceso a la app:\n\n🔗 https://perfect-simplicity-production.up.railway.app/movil\n\n📧 ${exitoso.usuario.email}\n🔒 ${password}\n\nCómo instalarla:\n1. Abre el link en Chrome\n2. Login con email y contraseña arriba\n3. Menú → "Agregar a pantalla de inicio"\n4. Listo, queda como app\n\nAl subir al camión: abre la app, escoge tu unidad, activa Auto-GPS.`
+                )}
+                className="btn btn-ghost btn-sm" style={{ marginTop: 8 }}>
+                📋 Copiar mensaje al portapapeles
+              </button>
+            </div>
+            <button onClick={onCreado} className="btn btn-primary btn-block">Listo</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OperadorCard({ operador, docCount, onOpenDocs, onCrearAcceso }) {
   const tieneVencidos = docCount.vencidos > 0;
   const tienePorVencer = docCount.por_vencer > 0;
   const colorIzq = tieneVencidos ? '#dc2626' : tienePorVencer ? '#d97706' : operador.activo === false ? '#9ca3af' : '#16a34a';
@@ -180,20 +299,34 @@ function OperadorCard({ operador, docCount, onOpenDocs }) {
             {!operador.telefono && !operador.licencia && <em style={{ color: '#9ca3af' }}>Sin teléfono ni licencia capturados</em>}
           </div>
 
-          <button
-            onClick={onOpenDocs}
-            style={{
-              marginTop: 10, padding: '6px 12px',
-              background: tieneVencidos ? '#fee2e2' : tienePorVencer ? '#fef3c7' : '#f3f4f6',
-              color: tieneVencidos ? '#991b1b' : tienePorVencer ? '#92400e' : '#374151',
-              border: '1px solid', borderColor: tieneVencidos ? '#dc2626' : tienePorVencer ? '#d97706' : '#d1d5db',
-              borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-            }}
-          >
-            📋 Documentos ({docCount.total})
-            {tieneVencidos && <span> · {docCount.vencidos} vencido(s)</span>}
-            {tienePorVencer && !tieneVencidos && <span> · {docCount.por_vencer} por vencer</span>}
-          </button>
+          <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+            <button
+              onClick={onOpenDocs}
+              style={{
+                padding: '6px 12px',
+                background: tieneVencidos ? '#fee2e2' : tienePorVencer ? '#fef3c7' : '#f3f4f6',
+                color: tieneVencidos ? '#991b1b' : tienePorVencer ? '#92400e' : '#374151',
+                border: '1px solid', borderColor: tieneVencidos ? '#dc2626' : tienePorVencer ? '#d97706' : '#d1d5db',
+                borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+              }}
+            >
+              📋 Documentos ({docCount.total})
+              {tieneVencidos && <span> · {docCount.vencidos} vencido(s)</span>}
+              {tienePorVencer && !tieneVencidos && <span> · {docCount.por_vencer} por vencer</span>}
+            </button>
+            {onCrearAcceso && (
+              <button
+                onClick={onCrearAcceso}
+                style={{
+                  padding: '6px 12px', background: '#1B3A6B', color: '#fff',
+                  border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                }}
+                title="Crear cuenta de usuario para que entre al modo móvil"
+              >
+                🔑 Crear acceso móvil
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

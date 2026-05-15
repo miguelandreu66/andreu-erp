@@ -23,10 +23,12 @@ import Movil from './pages/Movil';
 import Layout from './components/Layout';
 import './App.css';
 
-const PrivateRoute = ({ children, roles }) => {
+const PrivateRoute = ({ children, roles, allowOperador = false }) => {
   const { usuario, loading } = useAuth();
   if (loading) return <div className="loading">Cargando...</div>;
   if (!usuario) return <Navigate to="/login" />;
+  // Operadores SOLO pueden acceder a rutas marcadas allowOperador
+  if (usuario.rol === 'operador' && !allowOperador) return <Navigate to="/movil" />;
   if (roles && !roles.includes(usuario.rol)) return <Navigate to="/" />;
   return children;
 };
@@ -37,7 +39,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/movil" element={<PrivateRoute><Movil /></PrivateRoute>} />
+          <Route path="/movil" element={<PrivateRoute allowOperador={true}><Movil /></PrivateRoute>} />
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="unidades" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Unidades /></PrivateRoute>} />

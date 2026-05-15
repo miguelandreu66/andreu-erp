@@ -7,10 +7,12 @@ const INTERVALO_GPS_MS = 30000; // 30 segundos entre pings cuando auto-track est
 
 export default function Movil() {
   const { usuario, logout } = useAuth();
+  const esOperador = usuario?.rol === 'operador';
 
   const [unidades, setUnidades] = useState([]);
   const [unidadId, setUnidadId] = useState(() => localStorage.getItem(STORAGE_KEY_UNIDAD) || '');
   const [viajes, setViajes] = useState([]);
+  const [perfilOp, setPerfilOp] = useState(null);
   const [cargando, setCargando] = useState(true);
 
   // GPS state
@@ -32,19 +34,27 @@ export default function Movil() {
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
-      const [u, v] = await Promise.all([
-        api.unidades(),
-        api.viajes('').catch(() => []),
-      ]);
+      const u = await api.unidades();
       setUnidades(u || []);
-      // Filtrar viajes recientes (últimos 7 días)
-      const hace7 = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-      const recientes = (v || []).filter(viaje => viaje.fecha >= hace7);
-      setViajes(recientes);
+
+      if (esOperador) {
+        // Operadores: solo sus propios datos (servidor filtra por operador_id en JWT)
+        const [perfil, misViajes] = await Promise.all([
+          api.opMiPerfil().catch(() => null),
+          api.opMisViajes(7).catch(() => []),
+        ]);
+        setPerfilOp(perfil);
+        setViajes(misViajes || []);
+      } else {
+        // Otros roles (logistica/admin/director): ven todos los viajes recientes
+        const v = await api.viajes('').catch(() => []);
+        const hace7 = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+        setViajes((v || []).filter(viaje => viaje.fecha >= hace7));
+      }
     } catch (e) {
       setMsg({ tipo: 'red', txt: 'Error: ' + e.message });
     } finally { setCargando(false); }
-  }, []);
+  }, [esOperador]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -175,7 +185,10 @@ export default function Movil() {
           <div>
             <div style={{ fontSize: 11, opacity: 0.8, letterSpacing: 1, fontWeight: 700 }}>🚛 ANDREU LOGISTICS</div>
             <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>{usuario?.nombre}</div>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>Modo móvil</div>
+            <div style={{ fontSize: 12, opacity: 0.8 }}>
+              {esOperador ? '👤 Operador' : 'Modo móvil'}
+              {perfilOp?.licencia && esOperador && <> · Lic. {perfilOp.licencia}</>}
+            </div>
           </div>
           <button onClick={logout} style={{
             background: 'rgba(255,255,255,.15)', color: '#fff', border: '1px solid rgba(255,255,255,.3)',

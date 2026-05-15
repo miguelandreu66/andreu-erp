@@ -180,7 +180,13 @@ export const api = {
   operadores:         ()         => req('GET',  '/operadores'),
   crearOperador:      (body)     => req('POST', '/operadores', body),
   actualizarOperador: (id, body) => req('PUT', `/operadores/${id}`, body),
-  toggleOperador: (id) => req('PUT', `/operadores/${id}/toggle`),
+  toggleOperador:     (id)       => req('PUT', `/operadores/${id}/toggle`),
+
+  // Datos del operador (self, basado en usuario logeado)
+  opMiPerfil:    ()              => req('GET',  '/operadores/mi-perfil'),
+  opMisViajes:   (dias=30)       => req('GET',  `/operadores/mis-viajes?dias=${dias}`),
+  opCrearAcceso: (operadorId, email, password) =>
+    req('POST', `/operadores/${operadorId}/crear-acceso`, { email, password }),
 
   // Command AI / Andreu Logistics
   caiDashboard:       ()       => req('GET',  '/command-ai/dashboard'),
