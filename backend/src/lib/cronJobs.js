@@ -6,6 +6,7 @@ const { recomputarBaselines } = require('./commandAi/diesel');
 const { briefingEjecutivo }   = require('./commandAi/comercial');
 const auditorIA               = require('./commandAi/auditorIA');
 const vendedorIA              = require('./commandAi/vendedorIA');
+const retencionIA             = require('./commandAi/retencionIA');
 
 const TZ = process.env.CRON_TZ || 'America/Mexico_City';
 const JOBS = new Map();
@@ -115,6 +116,13 @@ const TAREAS = {
         }
       }
       return { reintentos: elegibles.length, exitos, fallidos };
+    },
+  },
+  retencion_ia_diario: {
+    schedule: '0 9 * * *',
+    descripcion: 'Retención IA — scoring de clientes + acciones (9 AM diario, respeta horario)',
+    ejecutar: async () => {
+      return await retencionIA.correrCicloDiario();
     },
   },
   vendedor_ia_drip: {

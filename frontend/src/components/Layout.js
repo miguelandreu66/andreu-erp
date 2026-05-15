@@ -13,6 +13,7 @@ const NAV = [
   { to: '/vendedor-ia',    label: 'Vendedor IA',  icon: '🤖', roles: ['director','admin','caja'] },
   { to: '/fiscal',         label: 'Facturación SAT', icon: '📄', roles: ['director','admin','caja'] },
   { to: '/asignador',      label: 'Asignador IA', icon: '🎯', roles: ['director','admin','logistica'] },
+  { to: '/retencion',      label: 'Retención IA', icon: '🔄', roles: ['director','admin','caja'] },
   { to: '/registro-movil', label: 'Registrar Viaje', icon: '🚛', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/movil',          label: 'Modo Móvil',      icon: '📱', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/logistica',      label: 'KPIs Flota',   icon: '📡', roles: ['director','admin','logistica','monitoreo'] },

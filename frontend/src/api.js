@@ -250,6 +250,16 @@ export const api = {
   transportistaDocArchivoUrl: (id)  => fileUrl(`/transportistas/documentos/${id}/archivo`),
   alertasVigenciaTransportistas: () => req('GET',    '/transportistas/documentos/alertas-vigencia'),
 
+  // Retención Autopilot (Fase 19)
+  retencionDashboard:    ()              => req('GET',  '/retencion-ia/dashboard'),
+  retencionSegmento:     (clasif)        => req('GET',  `/retencion-ia/segmentos/${clasif}`),
+  retencionAcciones:     (params='')     => req('GET',  `/retencion-ia/acciones${params}`),
+  retencionAccionDetalle:(id)            => req('GET',  `/retencion-ia/acciones/${id}`),
+  retencionCorrerCiclo:  (soloScoring=false) => req('POST', '/retencion-ia/correr-ciclo', { solo_scoring: soloScoring }),
+  retencionAccionManual: (clienteId, body) => req('POST', `/retencion-ia/cliente/${clienteId}/accion`, body),
+  retencionConfig:       ()              => req('GET',  '/retencion-ia/configuracion'),
+  retencionGuardarConfig:(body)          => req('PUT',  '/retencion-ia/configuracion', body),
+
   // Asignador IA (Fase 18)
   asignadorDashboard:    ()           => req('GET',  '/asignador-ia/dashboard'),
   asignadorSugerir:      (viajeId)    => req('POST', `/asignador-ia/sugerir/${viajeId}`),
