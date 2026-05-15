@@ -250,6 +250,19 @@ export const api = {
   transportistaDocArchivoUrl: (id)  => fileUrl(`/transportistas/documentos/${id}/archivo`),
   alertasVigenciaTransportistas: () => req('GET',    '/transportistas/documentos/alertas-vigencia'),
 
+  // CFDI 4.0 + Carta Porte 3.0 (Fase 17)
+  cfdiDashboard:          ()              => req('GET',  '/cfdi/dashboard'),
+  cfdiList:               (params='')     => req('GET',  `/cfdi${params}`),
+  cfdiDetalle:            (id)            => req('GET',  `/cfdi/${id}`),
+  cfdiEmitirViaje:        (viajeId)       => req('POST', `/cfdi/emitir-viaje/${viajeId}`),
+  cfdiReintentar:         (id)            => req('POST', `/cfdi/${id}/reintentar`),
+  cfdiEnviarCliente:      (id)            => req('POST', `/cfdi/${id}/enviar-cliente`),
+  cfdiCancelar:           (id, body)      => req('POST', `/cfdi/${id}/cancelar`, body),
+  cfdiPdfUrl:             (id)            => fileUrl(`/cfdi/${id}/pdf`),
+  cfdiXmlUrl:             (id)            => fileUrl(`/cfdi/${id}/xml`),
+  cfdiConfigEmpresa:      ()              => req('GET',  '/cfdi/configuracion/empresa'),
+  cfdiGuardarConfig:      (body)          => req('PUT',  '/cfdi/configuracion/empresa', body),
+
   // Vendedor IA 24/7 (Fase 16)
   vendedorDashboard:         ()                   => req('GET',  '/vendedor-ia/dashboard'),
   vendedorConversaciones:    (params='')          => req('GET',  `/vendedor-ia/conversaciones${params}`),

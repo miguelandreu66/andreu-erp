@@ -65,6 +65,21 @@ const CLAVES_VALIDAS = {
     validador: v => typeof v === 'string' && v.length >= 2 && v.length <= 100,
     formato_esperado: 'Andreu Logistics — Ventas',
   },
+  // ── PAC Facturama (Fase 17 — CFDI + Carta Porte) ──────────────
+  facturama_username: {
+    label: 'Facturama Username',
+    descripcion: 'Usuario de Facturama (PAC para emitir CFDI 4.0 + Carta Porte)',
+    env_var: 'FACTURAMA_USERNAME',
+    validador: v => typeof v === 'string' && v.length >= 3 && v.length <= 100,
+    formato_esperado: 'tu usuario Facturama',
+  },
+  facturama_password: {
+    label: 'Facturama Password',
+    descripcion: 'Contraseña/API key de Facturama',
+    env_var: 'FACTURAMA_PASSWORD',
+    validador: v => typeof v === 'string' && v.length >= 6 && v.length <= 200,
+    formato_esperado: 'contraseña o token de Facturama',
+  },
 };
 
 async function leer(clave) {
