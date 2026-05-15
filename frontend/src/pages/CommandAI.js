@@ -453,11 +453,193 @@ function TabScoring({ scoring, onSnapshot, snapping }) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+function CapturaTicketOCR() {
+  const [archivo, setArchivo] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [procesando, setProcesando] = useState(false);
+  const [resultado, setResultado] = useState(null);
+  const [error, setError] = useState(null);
+
+  const seleccionar = (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    if (f.size > 8 * 1024 * 1024) {
+      setError('Imagen demasiado grande (máx 8 MB)');
+      return;
+    }
+    setArchivo(f);
+    setError(null);
+    setResultado(null);
+    const reader = new FileReader();
+    reader.onload = ev => setPreview(ev.target.result);
+    reader.readAsDataURL(f);
+  };
+
+  const procesar = async () => {
+    if (!archivo) return;
+    setProcesando(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append('archivo', archivo);
+      const r = await api.caiDieselOcr(fd);
+      setResultado(r);
+    } catch (e) {
+      setError(e.message);
+    } finally { setProcesando(false); }
+  };
+
+  const limpiar = () => {
+    setArchivo(null); setPreview(null); setResultado(null); setError(null);
+  };
+
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, #1B3A6B 0%, #0f1f3a 100%)',
+      color: '#fff', borderRadius: 14, padding: 22, marginBottom: 20,
+    }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 14 }}>
+        <div style={{ fontSize: 28 }}>📸</div>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <h3 style={{ margin: '0 0 4px', fontSize: 18 }}>Capturar ticket con IA (Claude Vision)</h3>
+          <p style={{ margin: 0, fontSize: 13, opacity: 0.85 }}>
+            Sube foto de un ticket de Pemex/BP/Shell/etc. La IA extrae litros, precio, total, fecha y gasolinera en segundos.
+          </p>
+        </div>
+      </div>
+
+      {!archivo && (
+        <label style={{
+          display: 'block', padding: 30, background: 'rgba(255,255,255,.1)',
+          border: '2px dashed rgba(255,255,255,.3)', borderRadius: 10,
+          textAlign: 'center', cursor: 'pointer',
+        }}>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={seleccionar}
+            style={{ display: 'none' }}
+          />
+          <div style={{ fontSize: 36, marginBottom: 8 }}>📷</div>
+          <div style={{ fontWeight: 700 }}>Click para subir o tomar foto del ticket</div>
+          <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>JPG, PNG · máx 8 MB</div>
+        </label>
+      )}
+
+      {archivo && !resultado && (
+        <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 16, alignItems: 'start' }}>
+          {preview && (
+            <img src={preview} alt="ticket"
+              style={{ width: '100%', borderRadius: 8, border: '2px solid rgba(255,255,255,.3)' }} />
+          )}
+          <div>
+            <div style={{ fontSize: 13, marginBottom: 4 }}>{archivo.name}</div>
+            <div style={{ fontSize: 11, opacity: 0.8, marginBottom: 12 }}>{(archivo.size / 1024).toFixed(0)} KB</div>
+            {error && (
+              <div style={{ background: '#fee2e2', color: '#991b1b', padding: 10, borderRadius: 6, marginBottom: 10, fontSize: 13 }}>
+                ⚠️ {error}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={procesar} disabled={procesando} style={{
+                ...btnPrimary, background: '#E87722',
+              }}>
+                {procesando ? '🤖 Leyendo ticket...' : '✨ Extraer datos con IA'}
+              </button>
+              <button onClick={limpiar} style={btnSecondary}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resultado && (
+        <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 16, alignItems: 'start' }}>
+          {preview && (
+            <img src={preview} alt="ticket"
+              style={{ width: '100%', borderRadius: 8, border: '2px solid rgba(255,255,255,.3)' }} />
+          )}
+          <div style={{ background: 'rgba(255,255,255,.95)', color: '#1A1A1A', padding: 16, borderRadius: 10 }}>
+            {!resultado.datos?.es_ticket_combustible && (
+              <div style={{ background: '#fef3c7', color: '#78350f', padding: 10, borderRadius: 6, marginBottom: 12, fontSize: 13 }}>
+                ⚠️ Esta imagen no parece ser un ticket de combustible. Verifica e intenta de nuevo con una foto correcta.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <strong style={{ fontSize: 15 }}>Datos extraídos</strong>
+              <span style={{
+                fontSize: 11, padding: '2px 8px', borderRadius: 999, fontWeight: 700,
+                background: resultado.datos.confianza === 'alta' ? '#dcfce7' :
+                            resultado.datos.confianza === 'media' ? '#fef3c7' : '#fee2e2',
+                color: resultado.datos.confianza === 'alta' ? '#166534' :
+                       resultado.datos.confianza === 'media' ? '#92400e' : '#991b1b',
+              }}>
+                Confianza: {resultado.datos.confianza}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, fontSize: 13 }}>
+              <Field label="Fecha" value={resultado.datos.fecha} />
+              <Field label="Hora" value={resultado.datos.hora} />
+              <Field label="Combustible" value={resultado.datos.tipo_combustible} highlight={resultado.datos.tipo_combustible === 'diesel'} />
+              <Field label="Litros" value={resultado.datos.litros != null ? `${resultado.datos.litros} L` : null} />
+              <Field label="$/Litro" value={resultado.datos.precio_por_litro != null ? `$${resultado.datos.precio_por_litro}` : null} />
+              <Field label="Total" value={resultado.datos.total != null ? `$${resultado.datos.total.toLocaleString('es-MX')}` : null} highlight />
+              <Field label="Gasolinera" value={resultado.datos.gasolinera_marca} />
+              <Field label="Ubicación" value={resultado.datos.gasolinera_direccion} />
+              <Field label="RFC" value={resultado.datos.rfc_emisor} />
+              <Field label="Folio" value={resultado.datos.folio_ticket} />
+              <Field label="Pago" value={resultado.datos.metodo_pago} />
+            </div>
+
+            {resultado.alerta_consistencia && (
+              <div style={{ marginTop: 12, background: '#fee2e2', color: '#991b1b', padding: 10, borderRadius: 6, fontSize: 12 }}>
+                🚨 <strong>Alerta de inconsistencia:</strong> {resultado.alerta_consistencia}
+              </div>
+            )}
+
+            {resultado.datos.observaciones && (
+              <div style={{ marginTop: 10, background: '#f3f4f6', padding: 10, borderRadius: 6, fontSize: 12, color: '#6b7280', fontStyle: 'italic' }}>
+                💬 {resultado.datos.observaciones}
+              </div>
+            )}
+
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button onClick={limpiar} style={btnSecondary}>📸 Procesar otro</button>
+            </div>
+
+            <div style={{ marginTop: 10, fontSize: 10, color: '#9ca3af' }}>
+              Procesado en {resultado.duracion_ms}ms · {resultado.modelo} · {resultado.usage?.input_tokens + resultado.usage?.output_tokens} tokens
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, value, highlight }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.4, fontWeight: 700 }}>{label}</div>
+      <div style={{
+        fontSize: 14, fontWeight: highlight ? 800 : 500,
+        color: highlight ? '#1B3A6B' : value ? '#111' : '#9ca3af',
+        marginTop: 2,
+      }}>{value || '—'}</div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
 function TabDiesel({ baselines, onRecomputar, recomputando }) {
   if (!baselines) return <div>Cargando...</div>;
 
   return (
     <div>
+      <CapturaTicketOCR />
+
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
         <h3 style={{ margin: 0, flex: 1 }}>Baselines de diesel (rendimiento esperado lt/km)</h3>
         <button onClick={onRecomputar} disabled={recomputando} style={btnPrimary}>

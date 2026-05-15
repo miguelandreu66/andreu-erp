@@ -6,6 +6,9 @@ const { evaluarReglas, persistirAlertas, UMBRALES } = require('../lib/commandAi/
 const { generarResumen }    = require('../lib/commandAi/supervisor');
 const claudeSupervisor      = require('../lib/commandAi/claudeSupervisor');
 const apiKeys               = require('../lib/commandAi/apiKeysStore');
+const dieselOCR             = require('../lib/commandAi/dieselOCR');
+const multer                = require('multer');
+const ocrUpload             = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } }); // 8MB max
 const { calcularScoring, guardarSnapshot } = require('../lib/commandAi/scoring');
 const { recomputarBaselines, listarBaselines, analisisForense } = require('../lib/commandAi/diesel');
 const {
@@ -433,6 +436,34 @@ router.get('/scoring/historico/:operador_id', auth(ROLES_LECTURA), async (req, r
 // ══════════════════════════════════════════════════════════════════
 // DIESEL INTELIGENTE
 // ══════════════════════════════════════════════════════════════════
+// OCR de ticket de combustible con Claude Vision
+router.post('/diesel/ocr', auth(ROLES_ESCRITURA), ocrUpload.single('archivo'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No se recibió imagen del ticket' });
+  if (!req.file.mimetype.startsWith('image/')) {
+    return res.status(400).json({ error: 'El archivo debe ser una imagen (JPG, PNG, etc.)' });
+  }
+  try {
+    const r = await dieselOCR.extraerDeImagen(req.file.buffer, req.file.mimetype);
+    // Audit
+    try {
+      await db.query(`
+        INSERT INTO audit_log (usuario_id, accion, entidad, detalle, ip)
+        VALUES ($1, 'diesel_ocr', 'tickets', $2, $3)
+      `, [req.usuario.id, {
+        es_ticket: r.datos?.es_ticket_combustible,
+        litros: r.datos?.litros,
+        total: r.datos?.total,
+        confianza: r.datos?.confianza,
+        duracion_ms: r.duracion_ms,
+      }, req.ip]);
+    } catch (_) {}
+    res.json(r);
+  } catch (e) {
+    console.error('diesel ocr:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.get('/diesel/baselines', auth(ROLES_LECTURA), async (_req, res) => {
   try {
     res.json(await listarBaselines());
