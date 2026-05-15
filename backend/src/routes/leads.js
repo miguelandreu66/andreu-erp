@@ -4,6 +4,7 @@ const auth = require('../middleware/auth');
 const cotizador = require('../lib/cotizadorAI');
 const cotizacionPdf = require('../lib/reportes/cotizacionPdf');
 const vendedor = require('../lib/commandAi/vendedorIA');
+const asignador = require('../lib/commandAi/asignadorIA');
 
 // ══════════════════════════════════════════════════════════════════
 // ENDPOINT PÚBLICO — sin login, expuesto al mundo
@@ -267,6 +268,47 @@ router.post('/:id/convertir-cliente', auth(['director','admin']), async (req, re
     } catch (_) {}
 
     res.json({ ok: true, cliente, lead_folio: lead.folio });
+
+    // ── Asignador IA: crea viaje + asignación automática ──
+    // Fire-and-forget (no bloquea response)
+    (async () => {
+      try {
+        const { rows: [{ valor: activo }] } = await db.query(
+          `SELECT valor FROM configuracion_empresa WHERE clave = 'asignador_activo'`
+        );
+        if (activo !== 'true') return;
+
+        // Crear viaje base a partir del lead
+        const { rows: [v] } = await db.query(`
+          INSERT INTO viajes (
+            fecha, cliente_id, origen, destino, carga,
+            toneladas, km_recorridos, monto_cobrado_cliente,
+            tipo_carga, tipo_operacion, estado, registrado_por,
+            descripcion_mercancia
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pendiente_decidir', 'Programado', $10, $11)
+          RETURNING *
+        `, [
+          lead.fecha_solicitada || new Date().toISOString().split('T')[0],
+          cliente.id, lead.origen, lead.destino, lead.tipo_carga || 'general',
+          parseFloat(lead.toneladas || 0), parseFloat(lead.distancia_km || 0),
+          parseFloat(lead.precio_final || 0), lead.tipo_carga || 'general',
+          req.usuario.id, lead.comentarios?.slice(0, 300) || null,
+        ]);
+
+        // Sugerir asignación
+        const sug = await asignador.sugerirAsignacion(v.id, { leadId: lead.id });
+
+        // Si auto-aprobar y confianza alta, aplicar directo
+        if (await asignador.debeAutoAprobar(sug.decision.confianza)) {
+          await asignador.aplicarAsignacion(sug.asignacion.id, { aprobadaPorUsuario: req.usuario.id, esAuto: true });
+          console.log(`[Asignador-Auto] Lead ${lead.folio} → Viaje ${v.id} → Asignado (${sug.decision.tipo_operacion})`);
+        } else {
+          console.log(`[Asignador] Lead ${lead.folio} → Viaje ${v.id} → Sugerencia pendiente aprobación (confianza ${sug.decision.confianza})`);
+        }
+      } catch (e) {
+        console.error(`[Asignador] Lead ${lead.id} falló:`, e.message);
+      }
+    })();
   } catch (e) {
     console.error('convertir cliente:', e.message);
     res.status(500).json({ error: e.message });
