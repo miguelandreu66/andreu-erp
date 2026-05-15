@@ -229,6 +229,18 @@ export const api = {
   reactivarTransportista: (id)      => req('PUT',    `/transportistas/${id}/reactivar`),
   recalcularScoreTransportista: (id) => req('POST',  `/transportistas/${id}/recalcular-score`),
 
+  // Broker Finanzas (Fase 14)
+  brokerDashboard:        ()              => req('GET',    '/broker-finanzas/dashboard'),
+  brokerOperaciones:      ()              => req('GET',    '/broker-finanzas/operaciones'),
+  brokerConcentracion:    ()              => req('GET',    '/broker-finanzas/concentracion'),
+  brokerPagos:            (params='')     => req('GET',    `/broker-finanzas/pagos${params}`),
+  crearBrokerPago:        (body)          => req('POST',   '/broker-finanzas/pagos', body),
+  marcarBrokerPagoPagado: (id, body={})   => req('PUT',    `/broker-finanzas/pagos/${id}/marcar-pagado`, body),
+  cancelarBrokerPago:     (id, motivo)    => req('PUT',    `/broker-finanzas/pagos/${id}/cancelar`, { motivo }),
+  eliminarBrokerPago:     (id)            => req('DELETE', `/broker-finanzas/pagos/${id}`),
+  registrarCobroLead:     (leadId, body)  => req('POST',   `/broker-finanzas/leads/${leadId}/cobro`, body),
+  brokerConfig:           (body)          => req('PUT',    '/broker-finanzas/configuracion', body),
+
   // Documentos de transportistas
   transportistaDocsConfig: ()       => req('GET',    '/transportistas/config'),
   transportistaDocs:    (id)        => req('GET',    `/transportistas/${id}/documentos`),

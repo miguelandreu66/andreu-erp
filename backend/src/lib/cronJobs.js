@@ -55,6 +55,49 @@ const TAREAS = {
     descripcion: 'Recalcular baselines de rendimiento diesel (semanal lunes)',
     ejecutar: () => recomputarBaselines(),
   },
+  broker_cashflow_watchdog: {
+    schedule: '30 6 * * *',
+    descripcion: 'Marcar pagos vencidos a transportistas y registrar exposición de cashflow del día',
+    ejecutar: async () => {
+      // 1) Marcar pagos vencidos
+      const { rows: [{ broker_marcar_vencidos: nVencidos }] } = await db.query('SELECT broker_marcar_vencidos()');
+
+      // 2) Snapshot de exposición + alertas críticas en audit_log
+      const { rows: [exp] } = await db.query('SELECT * FROM broker_cashflow_exposicion');
+      const { rows: clientes } = await db.query('SELECT * FROM broker_concentracion_clientes LIMIT 3');
+      const { rows: transps  } = await db.query('SELECT * FROM broker_concentracion_transportistas LIMIT 3');
+
+      const { rows: cfgs } = await db.query(`
+        SELECT clave, valor FROM configuracion_empresa
+        WHERE clave IN ('broker_alerta_concentracion_cliente_pct','broker_alerta_concentracion_transportista_pct')
+      `);
+      const cfg = Object.fromEntries(cfgs.map(c => [c.clave, parseFloat(c.valor)]));
+
+      const alertasCriticas = [];
+      if (exp.exposicion_neta > 50000) {
+        alertasCriticas.push({ tipo: 'cashflow_negativo', monto: exp.exposicion_neta });
+      }
+      clientes.forEach(c => {
+        if (c.pct_volumen >= (cfg.broker_alerta_concentracion_cliente_pct || 25) * 1.5) {
+          alertasCriticas.push({ tipo: 'concentracion_cliente_critica', empresa: c.empresa, pct: c.pct_volumen });
+        }
+      });
+      transps.forEach(t => {
+        if (t.pct_volumen >= (cfg.broker_alerta_concentracion_transportista_pct || 30) * 1.5) {
+          alertasCriticas.push({ tipo: 'concentracion_transportista_critica', transportista: t.transportista, pct: t.pct_volumen });
+        }
+      });
+
+      return {
+        pagos_marcados_vencidos: nVencidos,
+        exposicion_neta: Math.round(exp.exposicion_neta || 0),
+        pendiente_cobrar_cliente: Math.round(exp.pendiente_cobrar_cliente || 0),
+        pendiente_pagar_transportista: Math.round(exp.pendiente_pagar_transportista || 0),
+        operaciones_activas: exp.operaciones_activas,
+        alertas_criticas: alertasCriticas,
+      };
+    },
+  },
   filtro_transportistas: {
     schedule: '15 4 * * *',
     descripcion: 'Degradar transportistas con docs críticos vencidos y avisar próximas revisiones',
