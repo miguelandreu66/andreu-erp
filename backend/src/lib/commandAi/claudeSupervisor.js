@@ -6,20 +6,54 @@
 
 const Anthropic = require('@anthropic-ai/sdk').default;
 const db = require('../../db');
+const apiKeys = require('./apiKeysStore');
 
 const MODELO = 'claude-sonnet-4-6';
 const MAX_TOKENS = 4096;
 const MAX_ITERACIONES = 8; // safety cap del tool-use loop
 
+// Cache del cliente con su API key. Se invalida si la key cambia.
 let _client = null;
-function getClient() {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
-  if (!_client) _client = new Anthropic();
+let _clientKey = null;
+
+async function getClient() {
+  const apiKey = await apiKeys.leer('anthropic_api_key');
+  if (!apiKey) return null;
+  if (_client && _clientKey === apiKey) return _client;
+  _client = new Anthropic({ apiKey });
+  _clientKey = apiKey;
   return _client;
 }
 
-function isAvailable() {
-  return !!process.env.ANTHROPIC_API_KEY;
+async function isAvailable() {
+  const apiKey = await apiKeys.leer('anthropic_api_key');
+  return !!apiKey;
+}
+
+// Prueba la API key haciendo una llamada mínima (count_tokens).
+// Devuelve { ok: bool, error?: string, modelo? }
+async function probarApiKey(apiKey) {
+  if (!apiKey || typeof apiKey !== 'string') return { ok: false, error: 'API key vacía' };
+  if (!apiKey.startsWith('sk-ant-')) return { ok: false, error: 'Formato inválido. Debe empezar con "sk-ant-"' };
+  try {
+    const cliente = new Anthropic({ apiKey });
+    // count_tokens es gratis y rápido; solo verifica auth
+    await cliente.messages.countTokens({
+      model: MODELO,
+      messages: [{ role: 'user', content: 'test' }],
+    });
+    return { ok: true, modelo: MODELO };
+  } catch (e) {
+    let msg = e.message || 'Error desconocido';
+    if (e instanceof Anthropic.AuthenticationError) {
+      msg = 'API key inválida o revocada';
+    } else if (e instanceof Anthropic.PermissionDeniedError) {
+      msg = 'La key no tiene permisos para este modelo';
+    } else if (e instanceof Anthropic.RateLimitError) {
+      msg = 'Rate limit alcanzado. Verifica que tu cuenta tenga créditos';
+    }
+    return { ok: false, error: msg };
+  }
 }
 
 // ── System prompt estable (cacheable) ──────────────────
@@ -372,7 +406,7 @@ async function ejecutarTool(nombre, input) {
 
 // ── Conversación principal con Claude (tool-use loop) ──
 async function preguntar({ mensaje, historial = [] }) {
-  const client = getClient();
+  const client = await getClient();
   if (!client) {
     throw new Error('ANTHROPIC_API_KEY no configurado. El supervisor IA conversacional requiere configurar la API key de Anthropic en Railway.');
   }
@@ -495,4 +529,4 @@ async function preguntar({ mensaje, historial = [] }) {
   };
 }
 
-module.exports = { isAvailable, preguntar, MODELO };
+module.exports = { isAvailable, preguntar, probarApiKey, MODELO };

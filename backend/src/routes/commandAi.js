@@ -5,6 +5,7 @@ const auth   = require('../middleware/auth');
 const { evaluarReglas, persistirAlertas, UMBRALES } = require('../lib/commandAi/rules');
 const { generarResumen }    = require('../lib/commandAi/supervisor');
 const claudeSupervisor      = require('../lib/commandAi/claudeSupervisor');
+const apiKeys               = require('../lib/commandAi/apiKeysStore');
 const { calcularScoring, guardarSnapshot } = require('../lib/commandAi/scoring');
 const { recomputarBaselines, listarBaselines, analisisForense } = require('../lib/commandAi/diesel');
 const {
@@ -282,20 +283,71 @@ router.put('/alertas/:id/descartar', auth(ROLES_ESCRITURA), async (req, res) => 
 // ══════════════════════════════════════════════════════════════════
 router.get('/supervisor', auth(ROLES_LECTURA), async (_req, res) => {
   try {
-    const resumen = await generarResumen();
-    res.json({ ...resumen, llm_disponible: claudeSupervisor.isAvailable() });
+    const [resumen, llm_disponible] = await Promise.all([
+      generarResumen(),
+      claudeSupervisor.isAvailable(),
+    ]);
+    res.json({ ...resumen, llm_disponible });
   } catch (e) {
     console.error('supervisor:', e.message);
     res.status(500).json({ error: 'Error al generar resumen IA' });
   }
 });
 
-// Disponibilidad del Claude (¿está configurado ANTHROPIC_API_KEY?)
-router.get('/supervisor/disponible', auth(ROLES_DASHBOARD), (_req, res) => {
+// Disponibilidad del Claude (¿está configurado?)
+router.get('/supervisor/disponible', auth(ROLES_DASHBOARD), async (_req, res) => {
   res.json({
-    llm_disponible: claudeSupervisor.isAvailable(),
+    llm_disponible: await claudeSupervisor.isAvailable(),
     modelo: claudeSupervisor.MODELO,
   });
+});
+
+// ── BYOK: gestión de API keys ────────────────────────────
+// GET disponibilidad de todas las API keys (sin revelar valores)
+router.get('/config/api-keys', auth(['director','admin']), async (_req, res) => {
+  try {
+    res.json(await apiKeys.disponibilidad());
+  } catch (e) {
+    console.error('api-keys disponibilidad:', e.message);
+    res.status(500).json({ error: 'Error al consultar disponibilidad' });
+  }
+});
+
+// POST guardar key (con validación previa contra el proveedor)
+router.post('/config/api-keys/:clave', auth(['director']), async (req, res) => {
+  const { clave } = req.params;
+  const { valor } = req.body || {};
+
+  if (!valor || typeof valor !== 'string') {
+    return res.status(400).json({ error: 'Falta el campo "valor" con la API key' });
+  }
+
+  try {
+    // Validación específica de Anthropic: probar la key contra la API
+    if (clave === 'anthropic_api_key') {
+      const prueba = await claudeSupervisor.probarApiKey(valor.trim());
+      if (!prueba.ok) {
+        return res.status(400).json({ error: `API key inválida: ${prueba.error}` });
+      }
+    }
+
+    await apiKeys.guardar(clave, valor.trim(), req.usuario.id);
+    res.json({ ok: true, mensaje: `${clave} guardada correctamente.` });
+  } catch (e) {
+    console.error('api-keys guardar:', e.message);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// DELETE remover key
+router.delete('/config/api-keys/:clave', auth(['director']), async (req, res) => {
+  try {
+    await apiKeys.eliminar(req.params.clave, req.usuario.id);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('api-keys eliminar:', e.message);
+    res.status(400).json({ error: e.message });
+  }
 });
 
 // Chat conversacional con Claude (requiere ANTHROPIC_API_KEY)

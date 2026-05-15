@@ -190,6 +190,13 @@ export const api = {
   caiSupervisorPreguntar: (mensaje, historial=[]) =>
     req('POST', '/command-ai/supervisor/preguntar', { mensaje, historial }),
 
+  // BYOK — API keys
+  caiApiKeysDisponibilidad: () => req('GET', '/command-ai/config/api-keys'),
+  caiApiKeyGuardar: (clave, valor) =>
+    req('POST', `/command-ai/config/api-keys/${clave}`, { valor }),
+  caiApiKeyEliminar: (clave) =>
+    req('DELETE', `/command-ai/config/api-keys/${clave}`),
+
   caiGpsLatest:       ()       => req('GET',  '/command-ai/gps/latest'),
   caiGpsUnidad:       (id, p='') => req('GET', `/command-ai/gps/unidad/${id}${p}`),
   caiGpsPing:         (body)   => req('POST', '/command-ai/gps/ping', body),

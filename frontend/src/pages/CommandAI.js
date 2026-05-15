@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const fmt$ = n => '$' + (parseFloat(n) || 0).toLocaleString('es-MX', { minimumFractionDigits: 0 });
 const fmtN = n => (parseFloat(n) || 0).toLocaleString('es-MX');
@@ -308,21 +309,7 @@ function TabSupervisor({ resumen, onRefresh }) {
       )}
 
       {modo === 'chat' && !llmDisponible && (
-        <div style={{
-          background: '#fef3c7', border: '1px solid #d97706', color: '#78350f',
-          padding: 18, borderRadius: 12, fontSize: 14, lineHeight: 1.6,
-        }}>
-          <strong>⚠️ Chat IA no activado</strong>
-          <p style={{ margin: '8px 0' }}>
-            Para activar el supervisor IA conversacional con Claude, agrega tu API key de Anthropic
-            como variable de entorno <code>ANTHROPIC_API_KEY</code> en Railway (servicio andreu-erp).
-          </p>
-          <p style={{ margin: 0, fontSize: 13 }}>
-            Costo aproximado: ~$0.005 USD por consulta · Modelo: Claude Sonnet 4.6 con prompt caching.
-            <br />
-            Generar API key: <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>
-          </p>
-        </div>
+        <ActivarChatIA onActivado={() => { setLlmDisponible(true); onRefresh(); }} />
       )}
 
       {modo === 'chat' && llmDisponible && (
@@ -797,6 +784,102 @@ function TabAutomatizaciones() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
+function ActivarChatIA({ onActivado }) {
+  const { usuario } = useAuth();
+  const esDirector = usuario?.rol === 'director';
+  const [apiKey, setApiKey] = useState('');
+  const [activando, setActivando] = useState(false);
+  const [mensaje, setMensaje] = useState(null);
+
+  const activar = async () => {
+    if (!apiKey.trim()) return;
+    setActivando(true);
+    setMensaje(null);
+    try {
+      await api.caiApiKeyGuardar('anthropic_api_key', apiKey.trim());
+      setMensaje({ tipo: 'ok', txt: '✅ API key activada. El chat IA ya está listo.' });
+      setApiKey('');
+      setTimeout(() => onActivado(), 1500);
+    } catch (e) {
+      setMensaje({ tipo: 'error', txt: e.message });
+    } finally {
+      setActivando(false);
+    }
+  };
+
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+      border: '1px solid #d97706', borderRadius: 14, padding: 24,
+    }}>
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 16 }}>
+        <div style={{ fontSize: 36 }}>🤖</div>
+        <div style={{ flex: 1 }}>
+          <h3 style={{ margin: '0 0 6px', color: '#78350f' }}>Activa el Supervisor IA conversacional</h3>
+          <p style={{ margin: 0, color: '#78350f', fontSize: 14, lineHeight: 1.5 }}>
+            Chat con Claude Sonnet 4.6 que consulta tu BD en vivo. Costo aproximado <strong>$0.01 USD por pregunta</strong> (~500 preguntas con $5 USD).
+          </p>
+        </div>
+      </div>
+
+      <div style={{ background: '#fff', borderRadius: 10, padding: 16, marginBottom: 12 }}>
+        <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: '#374151' }}>📝 Cómo obtener tu API key (2 minutos):</div>
+        <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: '#374151', lineHeight: 1.7 }}>
+          <li>Abre <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#1B3A6B', fontWeight: 600 }}>console.anthropic.com</a> y regístrate (gratis)</li>
+          <li>En el dashboard agrega saldo: mínimo <strong>$5 USD</strong> (botón "Buy credits")</li>
+          <li>Ve a <strong>Settings → API Keys → Create Key</strong></li>
+          <li>Copia el key que empieza con <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>sk-ant-api03-...</code></li>
+          <li>Pégalo aquí abajo</li>
+        </ol>
+      </div>
+
+      {esDirector ? (
+        <div style={{ background: '#fff', borderRadius: 10, padding: 16 }}>
+          <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6, color: '#374151' }}>
+            🔑 Tu API key de Anthropic
+          </label>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={e => setApiKey(e.target.value)}
+            placeholder="sk-ant-api03-..."
+            disabled={activando}
+            style={{
+              width: '100%', padding: '10px 14px', fontSize: 14,
+              borderRadius: 8, border: '1px solid #d1d5db', outline: 'none',
+              fontFamily: 'ui-monospace, "SF Mono", monospace',
+            }}
+          />
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button onClick={activar} disabled={activando || !apiKey.trim()} style={btnPrimary}>
+              {activando ? 'Validando con Anthropic...' : '⚡ Activar Supervisor IA'}
+            </button>
+            <span style={{ fontSize: 12, color: '#6b7280' }}>
+              Valido la key con Anthropic antes de guardar — si está mal, te aviso.
+            </span>
+          </div>
+          {mensaje && (
+            <div style={{
+              marginTop: 12, padding: 10, borderRadius: 8, fontSize: 13,
+              background: mensaje.tipo === 'ok' ? '#dcfce7' : '#fee2e2',
+              color: mensaje.tipo === 'ok' ? '#166534' : '#991b1b',
+            }}>{mensaje.txt}</div>
+          )}
+          <div style={{ marginTop: 14, fontSize: 11, color: '#6b7280', lineHeight: 1.5 }}>
+            🔒 La key se guarda en tu base de datos privada (Railway Postgres). Solo el rol Director puede agregarla/cambiarla.
+            Se valida en vivo contra Anthropic antes de guardar — keys inválidas no se persisten.
+          </div>
+        </div>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 10, padding: 16, fontSize: 13, color: '#78350f' }}>
+          ⚠️ Solo el rol <strong>Director</strong> puede configurar la API key. Pídele al director que la agregue.
         </div>
       )}
     </div>
