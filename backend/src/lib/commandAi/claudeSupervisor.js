@@ -20,7 +20,8 @@ async function getClient() {
   const apiKey = await apiKeys.leer('anthropic_api_key');
   if (!apiKey) return null;
   if (_client && _clientKey === apiKey) return _client;
-  _client = new Anthropic({ apiKey });
+  // maxRetries 4: el SDK reintenta automáticamente 429 y 5xx (incluido 529) con backoff exponencial
+  _client = new Anthropic({ apiKey, maxRetries: 4 });
   _clientKey = apiKey;
   return _client;
 }
