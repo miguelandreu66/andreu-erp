@@ -215,6 +215,7 @@ export const api = {
   caiDieselBaselines: ()       => req('GET',  '/command-ai/diesel/baselines'),
   caiDieselRecomputar:()       => req('POST', '/command-ai/diesel/recomputar', {}),
   caiDieselForense:   (id, dias=30) => req('GET', `/command-ai/diesel/forense/${id}?dias=${dias}`),
+  caiDieselOcr:       (formData) => reqUpload('/command-ai/diesel/ocr', formData),
 
   // Documentos de unidades (Cloudinary)
   docsConfig:           ()        => req('GET', '/unidades/documentos/config'),
