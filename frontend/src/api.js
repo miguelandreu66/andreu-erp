@@ -250,6 +250,23 @@ export const api = {
   transportistaDocArchivoUrl: (id)  => fileUrl(`/transportistas/documentos/${id}/archivo`),
   alertasVigenciaTransportistas: () => req('GET',    '/transportistas/documentos/alertas-vigencia'),
 
+  // Atracción Autónoma (Fase 20)
+  atraccionDashboard:        ()              => req('GET',  '/atraccion-ia/dashboard'),
+  atraccionTracking:         (body)          => req('POST', '/atraccion-ia/tracking/visita', body),
+  atraccionContenidoList:    (params='')     => req('GET',  `/atraccion-ia/contenido${params}`),
+  atraccionContenidoDetalle: (id)            => req('GET',  `/atraccion-ia/contenido/${id}`),
+  atraccionGenerar:          (tipo, tema)    => req('POST', '/atraccion-ia/contenido/generar', { tipo, tema }),
+  atraccionAprobar:          (id)            => req('PUT',  `/atraccion-ia/contenido/${id}/aprobar`),
+  atraccionPublicar:         (id, url)       => req('PUT',  `/atraccion-ia/contenido/${id}/publicar`, { url_publicado: url }),
+  atraccionRechazar:         (id, motivo)    => req('PUT',  `/atraccion-ia/contenido/${id}/rechazar`, { motivo }),
+  atraccionEditar:           (id, body)      => req('PUT',  `/atraccion-ia/contenido/${id}`, body),
+  atraccionCorrerCiclo:      ()              => req('POST', '/atraccion-ia/correr-ciclo'),
+  atraccionCampanas:         ()              => req('GET',  '/atraccion-ia/campanas'),
+  atraccionCrearCampana:     (body)          => req('POST', '/atraccion-ia/campanas', body),
+  atraccionActualizarCampana:(id, body)      => req('PUT',  `/atraccion-ia/campanas/${id}`, body),
+  atraccionConfig:           ()              => req('GET',  '/atraccion-ia/configuracion'),
+  atraccionGuardarConfig:    (body)          => req('PUT',  '/atraccion-ia/configuracion', body),
+
   // Retención Autopilot (Fase 19)
   retencionDashboard:    ()              => req('GET',  '/retencion-ia/dashboard'),
   retencionSegmento:     (clasif)        => req('GET',  `/retencion-ia/segmentos/${clasif}`),

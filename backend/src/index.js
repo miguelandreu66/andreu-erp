@@ -42,6 +42,7 @@ app.use('/api/vendedor-ia',    require('./routes/vendedorIA'));      // admin
 app.use('/api/cfdi',           require('./routes/cfdi'));            // CFDI + Carta Porte
 app.use('/api/asignador-ia',   require('./routes/asignadorIA'));     // Asignador inteligente
 app.use('/api/retencion-ia',   require('./routes/retencionIA'));     // Retención autopilot
+app.use('/api/atraccion-ia',   require('./routes/atraccionIA'));     // Atracción autónoma (Fase 20)
 
 app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Andreu ERP' }));
 

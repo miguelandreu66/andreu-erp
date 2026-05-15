@@ -7,6 +7,7 @@ const { briefingEjecutivo }   = require('./commandAi/comercial');
 const auditorIA               = require('./commandAi/auditorIA');
 const vendedorIA              = require('./commandAi/vendedorIA');
 const retencionIA             = require('./commandAi/retencionIA');
+const atraccionIA             = require('./commandAi/atraccionIA');
 
 const TZ = process.env.CRON_TZ || 'America/Mexico_City';
 const JOBS = new Map();
@@ -116,6 +117,13 @@ const TAREAS = {
         }
       }
       return { reintentos: elegibles.length, exitos, fallidos };
+    },
+  },
+  atraccion_ia_semanal: {
+    schedule: '0 10 * * 1',
+    descripcion: 'Atracción IA — genera post LinkedIn / blog / boletín automático (lunes 10 AM)',
+    ejecutar: async () => {
+      return await atraccionIA.correrCicloSemanal();
     },
   },
   retencion_ia_diario: {

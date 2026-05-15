@@ -29,6 +29,7 @@ import VendedorIA from './pages/VendedorIA';
 import Fiscal from './pages/Fiscal';
 import AsignadorIA from './pages/AsignadorIA';
 import RetencionIA from './pages/RetencionIA';
+import AtraccionIA from './pages/AtraccionIA';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="fiscal"      element={<PrivateRoute roles={['director','admin','caja']}><Fiscal /></PrivateRoute>} />
             <Route path="asignador"   element={<PrivateRoute roles={['director','admin','logistica']}><AsignadorIA /></PrivateRoute>} />
             <Route path="retencion"   element={<PrivateRoute roles={['director','admin','caja']}><RetencionIA /></PrivateRoute>} />
+            <Route path="atraccion"   element={<PrivateRoute roles={['director','admin']}><AtraccionIA /></PrivateRoute>} />
             <Route path="historicos" element={<PrivateRoute roles={['director','admin','monitoreo']}><Historicos /></PrivateRoute>} />
             <Route path="mantenimiento" element={<PrivateRoute roles={['director','admin','logistica']}><Mantenimiento /></PrivateRoute>} />
             <Route path="cotizaciones" element={<PrivateRoute roles={['director','admin','caja']}><Cotizaciones /></PrivateRoute>} />
