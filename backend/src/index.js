@@ -36,6 +36,7 @@ app.use('/api/leads',         require('./routes/leads'));
 app.use('/api/transportistas', require('./routes/transportistaDocumentos'));
 app.use('/api/transportistas', require('./routes/transportistas'));
 app.use('/api/broker-finanzas', require('./routes/brokerFinanzas'));
+app.use('/api/auditor-ia',     require('./routes/auditorIA'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Andreu ERP' }));
 

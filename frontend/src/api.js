@@ -250,6 +250,16 @@ export const api = {
   transportistaDocArchivoUrl: (id)  => fileUrl(`/transportistas/documentos/${id}/archivo`),
   alertasVigenciaTransportistas: () => req('GET',    '/transportistas/documentos/alertas-vigencia'),
 
+  // Auditor IA (Fase 15)
+  auditorDashboard:      ()              => req('GET',  '/auditor-ia/dashboard'),
+  auditorEjecuciones:    ()              => req('GET',  '/auditor-ia/ejecuciones'),
+  auditorEjecucion:      (id)            => req('GET',  `/auditor-ia/ejecuciones/${id}`),
+  auditorHallazgos:      (params='')     => req('GET',  `/auditor-ia/hallazgos${params}`),
+  auditorEjecutar:       ()              => req('POST', '/auditor-ia/ejecutar'),
+  auditorCambiarStatus:  (id, status, notas) => req('PUT', `/auditor-ia/hallazgos/${id}/status`, { status, notas }),
+  auditorConfig:         ()              => req('GET',  '/auditor-ia/configuracion'),
+  auditorGuardarConfig:  (body)          => req('PUT',  '/auditor-ia/configuracion', body),
+
   // Command AI / Andreu Logistics
   caiDashboard:       ()       => req('GET',  '/command-ai/dashboard'),
   caiConfig:          ()       => req('GET',  '/command-ai/config'),

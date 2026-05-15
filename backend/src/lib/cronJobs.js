@@ -4,6 +4,7 @@ const { evaluarReglas, persistirAlertas } = require('./commandAi/rules');
 const { guardarSnapshot }     = require('./commandAi/scoring');
 const { recomputarBaselines } = require('./commandAi/diesel');
 const { briefingEjecutivo }   = require('./commandAi/comercial');
+const auditorIA               = require('./commandAi/auditorIA');
 
 const TZ = process.env.CRON_TZ || 'America/Mexico_City';
 const JOBS = new Map();
@@ -54,6 +55,26 @@ const TAREAS = {
     schedule: '0 3 * * 1',
     descripcion: 'Recalcular baselines de rendimiento diesel (semanal lunes)',
     ejecutar: () => recomputarBaselines(),
+  },
+  auditor_ia_semanal: {
+    schedule: '0 7 * * 1',
+    descripcion: 'Auditor IA semanal — Claude analiza 8 módulos y emite hallazgos (lunes 7 AM)',
+    ejecutar: async () => {
+      // Verificar si está activo
+      const { rows: [{ valor: activo }] } = await db.query(`
+        SELECT valor FROM configuracion_empresa WHERE clave = 'auditor_ia_activo'
+      `);
+      if (activo !== 'true') {
+        return { skipped: true, motivo: 'auditor_ia_activo=false' };
+      }
+      const r = await auditorIA.ejecutarAuditoria({ tipo: 'programada' });
+      return {
+        ejecucion_id: r.ejecucion_id,
+        hallazgos: r.hallazgos_insertados,
+        costo_usd: r.costo_usd.toFixed(4),
+        modelo: r.modelo,
+      };
+    },
   },
   broker_cashflow_watchdog: {
     schedule: '30 6 * * *',
