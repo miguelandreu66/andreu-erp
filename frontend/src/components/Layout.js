@@ -10,6 +10,7 @@ const NAV = [
   { to: '/', label: 'Dashboard', icon: '📊', roles: ['director','admin','caja','logistica','monitoreo'] },
   { to: '/command-ai',     label: 'Command AI',   icon: '🤖', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/auditor',        label: 'Auditor IA',   icon: '🔍', roles: ['director'] },
+  { to: '/vendedor-ia',    label: 'Vendedor IA',  icon: '🤖', roles: ['director','admin','caja'] },
   { to: '/registro-movil', label: 'Registrar Viaje', icon: '🚛', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/movil',          label: 'Modo Móvil',      icon: '📱', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/logistica',      label: 'KPIs Flota',   icon: '📡', roles: ['director','admin','logistica','monitoreo'] },

@@ -25,6 +25,7 @@ import CotizadorPublico from './pages/CotizadorPublico';
 import Leads from './pages/Leads';
 import Broker from './pages/Broker';
 import AuditorIA from './pages/AuditorIA';
+import VendedorIA from './pages/VendedorIA';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -61,7 +62,8 @@ export default function App() {
             <Route path="compras"   element={<PrivateRoute roles={['director','admin']}><Compras /></PrivateRoute>} />
             <Route path="logistica" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Logistica /></PrivateRoute>} />
             <Route path="command-ai" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><CommandAI /></PrivateRoute>} />
-            <Route path="auditor"    element={<PrivateRoute roles={['director']}><AuditorIA /></PrivateRoute>} />
+            <Route path="auditor"     element={<PrivateRoute roles={['director']}><AuditorIA /></PrivateRoute>} />
+            <Route path="vendedor-ia" element={<PrivateRoute roles={['director','admin','caja']}><VendedorIA /></PrivateRoute>} />
             <Route path="historicos" element={<PrivateRoute roles={['director','admin','monitoreo']}><Historicos /></PrivateRoute>} />
             <Route path="mantenimiento" element={<PrivateRoute roles={['director','admin','logistica']}><Mantenimiento /></PrivateRoute>} />
             <Route path="cotizaciones" element={<PrivateRoute roles={['director','admin','caja']}><Cotizaciones /></PrivateRoute>} />

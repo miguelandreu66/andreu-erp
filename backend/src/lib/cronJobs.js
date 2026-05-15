@@ -5,6 +5,7 @@ const { guardarSnapshot }     = require('./commandAi/scoring');
 const { recomputarBaselines } = require('./commandAi/diesel');
 const { briefingEjecutivo }   = require('./commandAi/comercial');
 const auditorIA               = require('./commandAi/auditorIA');
+const vendedorIA              = require('./commandAi/vendedorIA');
 
 const TZ = process.env.CRON_TZ || 'America/Mexico_City';
 const JOBS = new Map();
@@ -55,6 +56,13 @@ const TAREAS = {
     schedule: '0 3 * * 1',
     descripcion: 'Recalcular baselines de rendimiento diesel (semanal lunes)',
     ejecutar: () => recomputarBaselines(),
+  },
+  vendedor_ia_drip: {
+    schedule: '*/30 * * * *',
+    descripcion: 'Procesar drip campaigns del Vendedor IA (cada 30 min, respeta horario configurado)',
+    ejecutar: async () => {
+      return await vendedorIA.procesarDripPendientes();
+    },
   },
   auditor_ia_semanal: {
     schedule: '0 7 * * 1',
