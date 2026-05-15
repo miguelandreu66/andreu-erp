@@ -31,6 +31,7 @@ app.use('/api',               require('./routes/unidadDocumentos'));
 app.use('/api/operadores',    require('./routes/operadorDocumentos'));
 app.use('/api/reportes-pdf',  require('./routes/reportesPdf'));
 app.use('/api/flotilla',      require('./routes/flotillaTarjetas'));
+app.use('/api/leads',         require('./routes/leads'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Andreu ERP' }));
 
