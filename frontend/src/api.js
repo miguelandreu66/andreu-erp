@@ -250,6 +250,17 @@ export const api = {
   transportistaDocArchivoUrl: (id)  => fileUrl(`/transportistas/documentos/${id}/archivo`),
   alertasVigenciaTransportistas: () => req('GET',    '/transportistas/documentos/alertas-vigencia'),
 
+  // Asignador IA (Fase 18)
+  asignadorDashboard:    ()           => req('GET',  '/asignador-ia/dashboard'),
+  asignadorSugerir:      (viajeId)    => req('POST', `/asignador-ia/sugerir/${viajeId}`),
+  asignadorAplicar:      (id)         => req('POST', `/asignador-ia/${id}/aplicar`),
+  asignadorRechazar:     (id, motivo) => req('POST', `/asignador-ia/${id}/rechazar`, { motivo }),
+  asignadorHistorial:    (params='')  => req('GET',  `/asignador-ia/historial${params}`),
+  asignadorDetalle:      (id)         => req('GET',  `/asignador-ia/${id}`),
+  asignadorReNotificar:  (id)         => req('POST', `/asignador-ia/${id}/notificar`),
+  asignadorConfig:       ()           => req('GET',  '/asignador-ia/configuracion/get'),
+  asignadorGuardarConfig:(body)       => req('PUT',  '/asignador-ia/configuracion/set', body),
+
   // CFDI 4.0 + Carta Porte 3.0 (Fase 17)
   cfdiDashboard:          ()              => req('GET',  '/cfdi/dashboard'),
   cfdiList:               (params='')     => req('GET',  `/cfdi${params}`),
