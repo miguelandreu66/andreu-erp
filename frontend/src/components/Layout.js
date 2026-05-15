@@ -18,6 +18,7 @@ const NAV = [
   { to: '/operadores',    label: 'Operadores',    icon: '👤', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/mantenimiento', label: 'Mantenimiento', icon: '🔧', roles: ['director','admin','logistica'] },
   { to: '/gastos',        label: 'Gastos y Diesel', icon: '⛽', roles: ['director','admin','caja','logistica'] },
+  { to: '/flotilla',      label: 'Tarjetas y TAGs', icon: '💳', roles: ['director','admin','logistica','monitoreo','caja'] },
 
   // ── Comercial / Cobranza ──────────────────────────
   { to: '/clientes',     label: 'Clientes',     icon: '👥', roles: ['director','admin','caja'] },

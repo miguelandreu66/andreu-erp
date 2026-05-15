@@ -20,6 +20,7 @@ import CommandAI from './pages/CommandAI';
 import Unidades from './pages/Unidades';
 import Operadores from './pages/Operadores';
 import Movil from './pages/Movil';
+import Flotilla from './pages/Flotilla';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -44,6 +45,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="unidades" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Unidades /></PrivateRoute>} />
             <Route path="operadores" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Operadores /></PrivateRoute>} />
+            <Route path="flotilla" element={<PrivateRoute roles={['director','admin','logistica','monitoreo','caja']}><Flotilla /></PrivateRoute>} />
             <Route path="flota" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Flota /></PrivateRoute>} />
             <Route path="gastos" element={<PrivateRoute roles={['director','admin','caja','logistica']}><Gastos /></PrivateRoute>} />
             <Route path="nomina" element={<PrivateRoute roles={['director','admin']}><Nomina /></PrivateRoute>} />

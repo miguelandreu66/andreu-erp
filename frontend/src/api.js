@@ -188,6 +188,21 @@ export const api = {
   opCrearAcceso: (operadorId, email, password) =>
     req('POST', `/operadores/${operadorId}/crear-acceso`, { email, password }),
 
+  // Flotilla — tarjetas combustible + TAGs casetas
+  flotillaResumen:     ()           => req('GET',    '/flotilla/resumen'),
+  flotillaProveedores: ()           => req('GET',    '/flotilla/proveedores'),
+  tarjetas:            ()           => req('GET',    '/flotilla/tarjetas'),
+  crearTarjeta:        (body)       => req('POST',   '/flotilla/tarjetas', body),
+  actualizarTarjeta:   (id, body)   => req('PUT',    `/flotilla/tarjetas/${id}`, body),
+  eliminarTarjeta:     (id)         => req('DELETE', `/flotilla/tarjetas/${id}`),
+  movimientosTarjeta:  (id, limit=100) => req('GET', `/flotilla/tarjetas/${id}/movimientos?limit=${limit}`),
+  crearMovimientoTarjeta: (id, body)   => req('POST',`/flotilla/tarjetas/${id}/movimientos`, body),
+  uploadCsvMovimientos:(id, formData)  => reqUpload(`/flotilla/tarjetas/${id}/movimientos/upload-csv`, formData),
+  tags:                ()           => req('GET',    '/flotilla/tags'),
+  crearTag:            (body)       => req('POST',   '/flotilla/tags', body),
+  crucesTag:           (id, limit=100) => req('GET', `/flotilla/tags/${id}/cruces?limit=${limit}`),
+  crearCruceTag:       (id, body)   => req('POST',   `/flotilla/tags/${id}/cruces`, body),
+
   // Command AI / Andreu Logistics
   caiDashboard:       ()       => req('GET',  '/command-ai/dashboard'),
   caiConfig:          ()       => req('GET',  '/command-ai/config'),
