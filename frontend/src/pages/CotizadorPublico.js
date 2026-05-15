@@ -205,7 +205,23 @@ function Resultado({ data, onNuevo }) {
       <div style={{ background: '#dcfce7', color: '#166534', padding: 14, borderRadius: 10, marginBottom: 18, textAlign: 'center' }}>
         ✅ <strong>{data.mensaje}</strong>
         <div style={{ fontSize: 12, marginTop: 4 }}>Folio: <strong>{data.folio}</strong></div>
+        <a
+          href={`/api/leads/pdf/${data.folio}`}
+          target="_blank" rel="noopener noreferrer"
+          style={{
+            display: 'inline-block', marginTop: 10, padding: '8px 16px',
+            background: '#1B3A6B', color: '#fff', borderRadius: 8,
+            textDecoration: 'none', fontWeight: 600, fontSize: 13,
+          }}
+        >📄 Descargar PDF de la cotización</a>
       </div>
+
+      {c.analisis_broker && (
+        <div style={{ background: '#dbeafe', color: '#1e3a8a', padding: 12, borderRadius: 10, marginBottom: 14, fontSize: 13 }}>
+          🤝 <strong>Tu carga la opera nuestra red de transportistas confiables.</strong>
+          <div style={{ fontSize: 12, marginTop: 4 }}>{c.analisis_broker.sugerencia}</div>
+        </div>
+      )}
 
       {/* Precio principal grande */}
       <div style={{ textAlign: 'center', padding: '20px 0', borderBottom: '2px solid #f3f4f6', marginBottom: 18 }}>

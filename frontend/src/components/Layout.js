@@ -22,6 +22,7 @@ const NAV = [
 
   // ── Comercial / Cobranza ──────────────────────────
   { to: '/leads',        label: 'Leads (Cotizador)', icon: '🎯', roles: ['director','admin','caja'] },
+  { to: '/broker',       label: 'Broker',       icon: '🤝', roles: ['director','admin'] },
   { to: '/clientes',     label: 'Clientes',     icon: '👥', roles: ['director','admin','caja'] },
   { to: '/cotizaciones', label: 'Cotizaciones', icon: '📄', roles: ['director','admin','caja'] },
   { to: '/cxc',          label: 'Por Cobrar',   icon: '💳', roles: ['director','admin','caja'] },
