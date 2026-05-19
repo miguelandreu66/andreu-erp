@@ -186,6 +186,10 @@ export const api = {
   // Datos del operador (self, basado en usuario logeado)
   opMiPerfil:    ()              => req('GET',  '/operadores/mi-perfil'),
   opMisViajes:   (dias=30)       => req('GET',  `/operadores/mis-viajes?dias=${dias}`),
+  opMarcarEntregado: (viajeId, body) => req('POST', `/operadores/viaje/${viajeId}/entregado`, body),
+  opSos:         (body)          => req('POST', '/operadores/sos', body),
+  opSosAbiertos: ()              => req('GET',  '/operadores/sos/abiertos'),
+  opSosAtender:  (id)            => req('PUT',  `/operadores/sos/${id}/atender`),
   opCrearAcceso: (operadorId, email, password) =>
     req('POST', `/operadores/${operadorId}/crear-acceso`, { email, password }),
 
