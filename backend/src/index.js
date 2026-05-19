@@ -1,18 +1,37 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const app = express();
-
-app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
-app.use(express.json());
-
 // ════════════════════════════════════════════════════════════════
 // Andreu Logistics — Sistema de operación de flota propia
 // El módulo broker (Vendedor IA, Asignador IA, Retención IA, Atracción IA,
 // Broker, Filtro transportistas) se separó al sistema independiente VIVO.
 // ════════════════════════════════════════════════════════════════
 
-// Routes — operación propia
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const {
+  helmetMiddleware, corsConfig,
+  loginLimiter, cotizadorLimiter, apiLimiter, agentesIaLimiter, gpsLimiter,
+} = require('./lib/seguridad');
+
+const app = express();
+
+// Confiar en proxy de Railway para detectar IP real
+app.set('trust proxy', 1);
+
+// Seguridad
+app.use(helmetMiddleware);
+app.use(cors(corsConfig()));
+app.use(express.json({ limit: '10mb' }));
+
+// ── Rate limiters específicos en endpoints sensibles ──
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/cotizaciones/publico', cotizadorLimiter);
+app.use('/api/agentes', agentesIaLimiter);
+// GPS endpoints permiten ráfagas (proveedor + app móvil)
+app.use('/api/command-ai/gps', gpsLimiter);
+// Limiter general para el resto
+app.use('/api', apiLimiter);
+
+// ── Routes — operación propia ───────────────────────
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/ventas', require('./routes/ventas'));
 app.use('/api/viajes', require('./routes/viajes'));
@@ -41,10 +60,29 @@ app.use('/api/auditor-ia',    require('./routes/auditorIA'));
 app.use('/api/cfdi',          require('./routes/cfdi'));            // CFDI + Carta Porte
 app.use('/api/agentes',       require('./routes/agentes'));         // 7 agentes IA
 
-app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Andreu Logistics' }));
+app.get('/health', (req, res) => res.json({
+  status: 'ok',
+  app: 'Andreu Logistics',
+  agentes_ia: 7,
+  uptime_seconds: Math.floor(process.uptime()),
+  timestamp: new Date().toISOString(),
+}));
+
+// Handler global de errores (último recurso)
+app.use((err, req, res, _next) => {
+  if (err.message?.includes('Origen no permitido')) {
+    return res.status(403).json({ error: 'CORS bloqueado' });
+  }
+  console.error('[ERROR]', err.message);
+  res.status(500).json({ error: 'Error interno del servidor' });
+});
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Andreu Logistics Backend corriendo en puerto ${PORT}`);
-  require('./lib/cronJobs').iniciar();
+  try {
+    require('./lib/cronJobs').iniciar();
+  } catch (e) {
+    console.warn('[CRON] no iniciado:', e.message);
+  }
 });

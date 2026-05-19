@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Flota from './pages/Flota';
@@ -46,7 +48,9 @@ const PrivateRoute = ({ children, roles, allowOperador = false }) => {
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <AuthProvider>
+    <ToastProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -80,6 +84,8 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+    </ToastProvider>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }
