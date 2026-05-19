@@ -64,6 +64,8 @@ export default function App() {
             <Route path="cxc"      element={<PrivateRoute roles={['director','admin','caja']}><CXC /></PrivateRoute>} />
             <Route path="compras"   element={<PrivateRoute roles={['director','admin']}><Compras /></PrivateRoute>} />
             <Route path="logistica" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Logistica /></PrivateRoute>} />
+            {/* /autopilot es el nuevo path; /command-ai queda como alias por bookmarks legacy */}
+            <Route path="autopilot"  element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><CommandAI /></PrivateRoute>} />
             <Route path="command-ai" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><CommandAI /></PrivateRoute>} />
             <Route path="auditor"     element={<PrivateRoute roles={['director']}><AuditorIA /></PrivateRoute>} />
             <Route path="fiscal"      element={<PrivateRoute roles={['director','admin','caja']}><Fiscal /></PrivateRoute>} />

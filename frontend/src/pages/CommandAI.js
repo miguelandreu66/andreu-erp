@@ -1212,7 +1212,7 @@ export default function CommandAI() {
     <div>
       <div className="page-header">
         <div>
-          <h2 style={{ margin: 0 }}>🚀 Andreu Logistics — Command AI</h2>
+          <h2 style={{ margin: 0 }}>🚀 Andreu Autopilot</h2>
           <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 14 }}>
             Centro de control inteligente · alertas en vivo · supervisor IA · scoring · diesel forense
           </p>

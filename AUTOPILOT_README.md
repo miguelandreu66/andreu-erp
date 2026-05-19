@@ -1,63 +1,79 @@
-# Módulo COMMAND AI — Andreu Logistics
+# Módulo AUTOPILOT — Andreu Logistics
 
-Capa de inteligencia operativa en tiempo real sobre el ERP existente.
+> **Nota de naming**: antes se llamaba "Command AI" (cuando Andreu hacía ERP + brokerage).
+> Después del split en mayo 2026 (brokerage se fue a VIVO), el módulo se rebautizó como
+> **Autopilot**. El path frontend ahora es `/autopilot` (`/command-ai` sigue como alias
+> para no romper bookmarks). El backend mantiene los endpoints `/api/command-ai/*` y los
+> métodos `api.cai*` del frontend — son nombres internos estables.
+
+Capa de inteligencia operativa en tiempo real sobre el ERP de Andreu Logistics
+(3 plataformas 48' en Cuernavaca, Morelos).
 
 ## Qué agrega
 
-**Backend** (rutas bajo `/api/command-ai`):
+**Backend** (rutas bajo `/api/command-ai`, alias del Autopilot):
 - `/dashboard` — estado consolidado de la flota en vivo
 - `/gps/ping` `/gps/batch` `/gps/latest` `/gps/unidad/:id` — ingesta y consulta GPS
 - `/alertas` `/alertas/evaluar` `/alertas/:id/{atender,resolver,descartar}` — alertas persistentes con ciclo de vida
-- `/supervisor` — resumen IA determinístico (Fase 1, LLM en Fase 2)
+- `/supervisor` — supervisor IA conversacional (Claude vía BYOK)
 - `/scoring` `/scoring/snapshot` `/scoring/historico/:id` — scoring de operadores
 - `/diesel/baselines` `/diesel/recomputar` `/diesel/forense/:id` — diesel inteligente
+- `/diesel/ocr` — OCR de tickets de diesel (Claude Vision)
+- `/insights/briefing` `/insights/all` — briefing comercial diario
+- `/cron/estado` `/cron/historial` `/cron/disparar/:nombre` — control de cron jobs
 - `/config` — umbrales operativos visibles
 
-**Frontend**: nueva ruta `/command-ai` con tabs Dashboard / Alertas / Supervisor IA / Scoring / Diesel.
+**Frontend**: ruta `/autopilot` con tabs Dashboard / Alertas / Supervisor IA / Scoring / Diesel.
 Visible para roles: `director`, `admin`, `logistica`, `monitoreo`.
 
-**BD**: 5 tablas nuevas (`gps_pings`, `alertas`, `scoring_snapshots`, `diesel_baselines`, `audit_log`) + vista `unidades_ultima_posicion`.
+**BD**: tablas operativas — `gps_pings`, `alertas`, `scoring_snapshots`, `diesel_baselines`,
+`audit_log` + vista `unidades_ultima_posicion`.
 
-## Cómo activarlo (1 vez, ~5 minutos)
+## Cómo activarlo
 
-### 1) Aplica la migración en Railway
+### 1) Migraciones (ya aplicadas en Railway prod)
 
-Abre Railway → tu base de datos → **Query Runner**. Copia el contenido de `migration_fase5_command_ai.sql` y ejecútalo. Debe terminar con un SELECT mostrando 5 tablas con `count = 0`.
+`migration_fase5_command_ai.sql` y siguientes están corridas. Si levantas un entorno nuevo,
+aplica todas las migrations en orden numérico.
 
 ### 2) (Opcional) Seed demo
 
-Para que el dashboard muestre algo de inmediato sin esperar GPS real, ejecuta también `seed_command_ai.sql` en el Query Runner. Es **idempotente** (no duplica si lo corres dos veces).
+`seed_command_ai.sql` es idempotente — pone datos de muestra en el dashboard para que se
+vea con vida antes de que llegue el primer ping GPS real.
 
 ### 3) Despliega
 
-El backend ya tiene la ruta registrada en `backend/src/index.js`. Cuando hagas `git push`, Railway redespliega automáticamente.
+Backend monta la ruta automáticamente desde `backend/src/index.js`. Frontend usa los
+helpers `api.cai*` del cliente. Cuando hagas `git push`, Railway redespliega.
 
-### 4) Verifica
+### 4) Verifica en VIVO
 
-- Abre el ERP, ve a **Command AI** en el menú lateral
-- Tab Dashboard: deberías ver tu flota
-- Tab Alertas: pulsa "⚡ Evaluar reglas ahora" para correr el motor
-- Tab Scoring: pulsa "📸 Guardar snapshot" para crear el primer histórico
-- Tab Diesel: pulsa "🧮 Recalcular baselines" (necesitas ≥ 3 viajes completados por unidad)
+- Abre el ERP → menú lateral **Autopilot**
+- Tab **Dashboard**: estado de tu flota en vivo
+- Tab **Alertas**: pulsa "⚡ Evaluar reglas ahora" para correr el motor
+- Tab **Supervisor IA**: pregúntale lo que sea sobre la operación del día
+- Tab **Scoring**: pulsa "📸 Guardar snapshot" para histórico de scores
+- Tab **Diesel**: "🧮 Recalcular baselines" (necesitas ≥ 3 viajes completados por unidad)
 
 ## Configuración (variables de entorno)
 
-No requiere variables nuevas en Fase 1. Usa el `DATABASE_URL` y `JWT_SECRET` que el ERP ya tiene.
-
-Para Fase 2 (supervisor IA con LLM):
+Requeridas:
 ```
-ANTHROPIC_API_KEY=sk-ant-...
+DATABASE_URL=postgresql://...     # ya configurado
+JWT_SECRET=...                    # ya configurado
 ```
 
-## Roadmap del módulo
+Opcionales (BYOK por usuario — los puedes meter desde la UI en Configuración → API Keys):
+```
+ANTHROPIC_API_KEY=sk-ant-...      # supervisor IA + briefing + OCR de diesel
+MAPBOX_API_KEY=pk....              # mapa de unidades en vivo
+TWILIO_*                            # WhatsApp Business para escalado de alertas
+```
 
-- **Fase 1 (este sprint):** ✅ tablas, motor de reglas determinístico, frontend completo, GPS via webhook/manual
-- **Fase 2:** integración Claude API en `/supervisor` con tool-use, mapa real (Mapbox), WhatsApp Business para escalado
-- **Fase 3:** ingesta GPS automatizada (proveedor real), geofencing PostGIS, reportes PDF, app móvil del operador
+## Recibir pings GPS reales
 
-## Cómo recibir pings GPS reales
-
-Tu proveedor GPS o app móvil debe hacer POST a `/api/command-ai/gps/ping` con header `Authorization: Bearer <token>`:
+Tu proveedor GPS o app móvil debe hacer POST a `/api/command-ai/gps/ping` con header
+`Authorization: Bearer <token>`:
 
 ```json
 {
@@ -72,17 +88,31 @@ Tu proveedor GPS o app móvil debe hacer POST a `/api/command-ai/gps/ping` con h
 }
 ```
 
-Para ingesta masiva (recomendado para proveedor GPS):
-
+Para ingesta masiva:
 ```
 POST /api/command-ai/gps/batch
 { "pings": [ {...}, {...} ] }
 ```
 
-## Cron jobs recomendados (Fase 2)
+## Cron jobs
 
-- Cada 5 min: `POST /api/command-ai/alertas/evaluar` para generar alertas automáticamente
-- Diario 6am: `POST /api/command-ai/scoring/snapshot` para histórico de scores
-- Semanal: `POST /api/command-ai/diesel/recomputar` para refinar baselines
+Andreu corre `lib/cronJobs.js` con `node-cron` en el proceso principal:
 
-En Railway se pueden configurar como cron tasks o desde una instancia separada con `node-cron`.
+- Cada 5 min: `evaluar-alertas` — el motor de reglas escanea unidades y dispara alertas
+- Diario 6am: `scoring-snapshot` — guarda histórico de scoring de operadores
+- Semanal lunes 3am: `diesel-recomputar` — refina baselines de rendimiento por unidad
+- Diario 7am: `briefing-comercial` — genera el briefing IA del día
+
+Disparables manualmente desde `/autopilot` → tab **Cron** (solo director/admin).
+
+## Por qué se llama Autopilot ahora
+
+Cuando Andreu hacía ERP + brokerage, este módulo se llamaba "Command AI" porque era el
+centro de comando de TODO. Después del split (mayo 2026) el brokerage se fue a VIVO con
+sus propios 12 agentes IA, y este módulo quedó enfocado **solo en la flota propia**:
+GPS, alertas operativas, scoring de operadores, diesel forense, briefing comercial.
+"Autopilot" describe mejor lo que hace hoy — automatiza la supervisión de los 3 camiones
+sin que el coordinador tenga que estar pegado a la pantalla.
+
+El nombre cambió en la UI; los endpoints internos siguen igual para no romper integraciones
+existentes (proveedor GPS, app móvil, scripts externos).

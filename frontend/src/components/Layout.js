@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 const NAV = [
   // ── Núcleo operativo ──────────────────────────────
   { to: '/', label: 'Dashboard', icon: '📊', roles: ['director','admin','caja','logistica','monitoreo'] },
-  { to: '/command-ai',     label: 'Command AI',   icon: '🤖', roles: ['director','admin','logistica','monitoreo'] },
+  { to: '/autopilot',      label: 'Autopilot',    icon: '🤖', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/agentes',        label: 'Agentes IA',   icon: '🧠', roles: ['director','admin','caja','logistica'] },
   { to: '/auditor',        label: 'Auditor IA',   icon: '🔍', roles: ['director'] },
   { to: '/fiscal',         label: 'Facturación SAT', icon: '📄', roles: ['director','admin','caja'] },
