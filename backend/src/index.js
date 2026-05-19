@@ -60,13 +60,17 @@ app.use('/api/auditor-ia',    require('./routes/auditorIA'));
 app.use('/api/cfdi',          require('./routes/cfdi'));            // CFDI + Carta Porte
 app.use('/api/agentes',       require('./routes/agentes'));         // 7 agentes IA
 
-app.get('/health', (req, res) => res.json({
-  status: 'ok',
-  app: 'Andreu Logistics',
-  agentes_ia: 7,
-  uptime_seconds: Math.floor(process.uptime()),
-  timestamp: new Date().toISOString(),
-}));
+// ── Healthchecks ────────────────────────────────────
+const health = require('./lib/healthcheck');
+app.get('/health',       (req, res) => res.json(health.basic()));
+app.get('/health/full',  async (req, res) => {
+  const r = await health.full();
+  res.status(r.status === 'critical' ? 503 : 200).json(r);
+});
+app.get('/health/ready', async (req, res) => {
+  const r = await health.ready();
+  res.status(r.ready ? 200 : 503).json(r);
+});
 
 // Handler global de errores (último recurso)
 app.use((err, req, res, _next) => {
