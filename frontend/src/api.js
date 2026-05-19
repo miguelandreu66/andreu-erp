@@ -203,6 +203,14 @@ export const api = {
   crucesTag:           (id, limit=100) => req('GET', `/flotilla/tags/${id}/cruces?limit=${limit}`),
   crearCruceTag:       (id, body)   => req('POST',   `/flotilla/tags/${id}/cruces`, body),
 
+  // ── 7 Agentes IA Andreu (Fase 23) ──
+  agentesList:           ()                       => req('GET',  '/agentes'),
+  agentesDetalle:        (nombre)                 => req('GET',  `/agentes/${nombre}`),
+  agentesConversar:      (nombre, mensaje, historial=[], contexto_extra=null) =>
+    req('POST', `/agentes/${nombre}/conversar`, { mensaje, historial, contexto_extra }),
+  agentesHistorial:      (params='')              => req('GET',  `/agentes/historial/invocaciones${params}`),
+  agentesCostos:         (dias=30)                => req('GET',  `/agentes/historial/costos?dias=${dias}`),
+
   // CFDI 4.0 + Carta Porte 3.0 (Fase 17)
   cfdiDashboard:          ()              => req('GET',  '/cfdi/dashboard'),
   cfdiList:               (params='')     => req('GET',  `/cfdi${params}`),

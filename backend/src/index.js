@@ -39,6 +39,7 @@ app.use('/api/reportes-pdf',  require('./routes/reportesPdf'));
 app.use('/api/flotilla',      require('./routes/flotillaTarjetas'));
 app.use('/api/auditor-ia',    require('./routes/auditorIA'));
 app.use('/api/cfdi',          require('./routes/cfdi'));            // CFDI + Carta Porte
+app.use('/api/agentes',       require('./routes/agentes'));         // 7 agentes IA
 
 app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Andreu Logistics' }));
 
