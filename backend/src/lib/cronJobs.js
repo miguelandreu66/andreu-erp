@@ -1,3 +1,8 @@
+// ════════════════════════════════════════════════════════════════
+// Andreu Logistics — Cron Jobs (operación propia)
+// El módulo broker se separó al sistema VIVO.
+// ════════════════════════════════════════════════════════════════
+
 const cron = require('node-cron');
 const db   = require('../db');
 const { evaluarReglas, persistirAlertas } = require('./commandAi/rules');
@@ -5,9 +10,6 @@ const { guardarSnapshot }     = require('./commandAi/scoring');
 const { recomputarBaselines } = require('./commandAi/diesel');
 const { briefingEjecutivo }   = require('./commandAi/comercial');
 const auditorIA               = require('./commandAi/auditorIA');
-const vendedorIA              = require('./commandAi/vendedorIA');
-const retencionIA             = require('./commandAi/retencionIA');
-const atraccionIA             = require('./commandAi/atraccionIA');
 
 const TZ = process.env.CRON_TZ || 'America/Mexico_City';
 const JOBS = new Map();
@@ -63,7 +65,6 @@ const TAREAS = {
     schedule: '*/15 * * * *',
     descripcion: 'Reintentar CFDIs fallidos automáticamente (cada 15 min, max 3 reintentos)',
     ejecutar: async () => {
-      // Busca fallidos con menos de 3 intentos y los reintenta
       const { rows: pendientes } = await db.query(`
         SELECT c.id, c.viaje_id,
           (SELECT COUNT(*) FROM cfdi_eventos WHERE cfdi_id = c.id AND evento = 'error_pac')::int AS intentos
@@ -77,7 +78,6 @@ const TAREAS = {
       let exitos = 0, fallidos = 0;
       for (const p of elegibles) {
         try {
-          // Re-emitir: borra el fallido y vuelve a intentar
           const facturama = require('./fiscal/facturama');
           const builder = require('./fiscal/cfdiBuilder');
           if (!await facturama.isAvailable()) break;
@@ -119,32 +119,10 @@ const TAREAS = {
       return { reintentos: elegibles.length, exitos, fallidos };
     },
   },
-  atraccion_ia_semanal: {
-    schedule: '0 10 * * 1',
-    descripcion: 'Atracción IA — genera post LinkedIn / blog / boletín automático (lunes 10 AM)',
-    ejecutar: async () => {
-      return await atraccionIA.correrCicloSemanal();
-    },
-  },
-  retencion_ia_diario: {
-    schedule: '0 9 * * *',
-    descripcion: 'Retención IA — scoring de clientes + acciones (9 AM diario, respeta horario)',
-    ejecutar: async () => {
-      return await retencionIA.correrCicloDiario();
-    },
-  },
-  vendedor_ia_drip: {
-    schedule: '*/30 * * * *',
-    descripcion: 'Procesar drip campaigns del Vendedor IA (cada 30 min, respeta horario configurado)',
-    ejecutar: async () => {
-      return await vendedorIA.procesarDripPendientes();
-    },
-  },
   auditor_ia_semanal: {
     schedule: '0 7 * * 1',
-    descripcion: 'Auditor IA semanal — Claude analiza 8 módulos y emite hallazgos (lunes 7 AM)',
+    descripcion: 'Auditor IA semanal — Claude analiza módulos y emite hallazgos (lunes 7 AM)',
     ejecutar: async () => {
-      // Verificar si está activo
       const { rows: [{ valor: activo }] } = await db.query(`
         SELECT valor FROM configuracion_empresa WHERE clave = 'auditor_ia_activo'
       `);
@@ -157,93 +135,6 @@ const TAREAS = {
         hallazgos: r.hallazgos_insertados,
         costo_usd: r.costo_usd.toFixed(4),
         modelo: r.modelo,
-      };
-    },
-  },
-  broker_cashflow_watchdog: {
-    schedule: '30 6 * * *',
-    descripcion: 'Marcar pagos vencidos a transportistas y registrar exposición de cashflow del día',
-    ejecutar: async () => {
-      // 1) Marcar pagos vencidos
-      const { rows: [{ broker_marcar_vencidos: nVencidos }] } = await db.query('SELECT broker_marcar_vencidos()');
-
-      // 2) Snapshot de exposición + alertas críticas en audit_log
-      const { rows: [exp] } = await db.query('SELECT * FROM broker_cashflow_exposicion');
-      const { rows: clientes } = await db.query('SELECT * FROM broker_concentracion_clientes LIMIT 3');
-      const { rows: transps  } = await db.query('SELECT * FROM broker_concentracion_transportistas LIMIT 3');
-
-      const { rows: cfgs } = await db.query(`
-        SELECT clave, valor FROM configuracion_empresa
-        WHERE clave IN ('broker_alerta_concentracion_cliente_pct','broker_alerta_concentracion_transportista_pct')
-      `);
-      const cfg = Object.fromEntries(cfgs.map(c => [c.clave, parseFloat(c.valor)]));
-
-      const alertasCriticas = [];
-      if (exp.exposicion_neta > 50000) {
-        alertasCriticas.push({ tipo: 'cashflow_negativo', monto: exp.exposicion_neta });
-      }
-      clientes.forEach(c => {
-        if (c.pct_volumen >= (cfg.broker_alerta_concentracion_cliente_pct || 25) * 1.5) {
-          alertasCriticas.push({ tipo: 'concentracion_cliente_critica', empresa: c.empresa, pct: c.pct_volumen });
-        }
-      });
-      transps.forEach(t => {
-        if (t.pct_volumen >= (cfg.broker_alerta_concentracion_transportista_pct || 30) * 1.5) {
-          alertasCriticas.push({ tipo: 'concentracion_transportista_critica', transportista: t.transportista, pct: t.pct_volumen });
-        }
-      });
-
-      return {
-        pagos_marcados_vencidos: nVencidos,
-        exposicion_neta: Math.round(exp.exposicion_neta || 0),
-        pendiente_cobrar_cliente: Math.round(exp.pendiente_cobrar_cliente || 0),
-        pendiente_pagar_transportista: Math.round(exp.pendiente_pagar_transportista || 0),
-        operaciones_activas: exp.operaciones_activas,
-        alertas_criticas: alertasCriticas,
-      };
-    },
-  },
-  filtro_transportistas: {
-    schedule: '15 4 * * *',
-    descripcion: 'Degradar transportistas con docs críticos vencidos y avisar próximas revisiones',
-    ejecutar: async () => {
-      // 1) Degradar verificados que ahora tienen docs críticos vencidos → en_revision
-      const { rows: degradados } = await db.query(`
-        UPDATE transportistas_externos t
-        SET estado_verificacion = 'en_revision', updated_at = NOW()
-        FROM transportistas_checklist chk
-        WHERE chk.transportista_id = t.id
-          AND t.estado_verificacion = 'verificado'
-          AND chk.tiene_docs_vencidos_criticos = true
-        RETURNING t.id, t.razon_social
-      `);
-
-      // 2) Marcar fecha_proxima_revision vencida → en_revision
-      const { rows: revisiones } = await db.query(`
-        UPDATE transportistas_externos
-        SET estado_verificacion = 'en_revision', updated_at = NOW()
-        WHERE estado_verificacion = 'verificado'
-          AND fecha_proxima_revision IS NOT NULL
-          AND fecha_proxima_revision <= CURRENT_DATE
-        RETURNING id, razon_social
-      `);
-
-      // 3) Recalcular score de todos los activos
-      await db.query(`
-        UPDATE transportistas_externos
-        SET score_automatico = LEAST(100, GREATEST(0,
-              (calificacion * 10) +
-              (total_viajes_completados * 2) -
-              (total_incidentes * 15)
-            )),
-            updated_at = NOW()
-        WHERE activo = true
-      `);
-
-      return {
-        degradados_por_docs_vencidos: degradados.length,
-        degradados_por_revision_anual: revisiones.length,
-        muestra_degradados: degradados.slice(0, 5).map(d => d.razon_social),
       };
     },
   },

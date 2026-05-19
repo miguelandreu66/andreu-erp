@@ -2,18 +2,14 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-// NAV reordenado para Andreu Logistics — transporte de carga pesada B2B.
-// Caja, Inventario y Compras de mercancía se ocultan del menú diario (manual fase 2.3).
-// El histórico FerreExpress sigue accesible vía rutas directas para el Director.
+// NAV de Andreu Logistics — Sistema Operativo Inteligente para operación de flota propia
+// (3 plataformas 48' en Cuernavaca, Morelos). El módulo broker se separó al sistema VIVO.
 const NAV = [
   // ── Núcleo operativo ──────────────────────────────
   { to: '/', label: 'Dashboard', icon: '📊', roles: ['director','admin','caja','logistica','monitoreo'] },
   { to: '/command-ai',     label: 'Command AI',   icon: '🤖', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/auditor',        label: 'Auditor IA',   icon: '🔍', roles: ['director'] },
-  { to: '/vendedor-ia',    label: 'Vendedor IA',  icon: '🤖', roles: ['director','admin','caja'] },
   { to: '/fiscal',         label: 'Facturación SAT', icon: '📄', roles: ['director','admin','caja'] },
-  { to: '/asignador',      label: 'Asignador IA', icon: '🎯', roles: ['director','admin','logistica'] },
-  { to: '/retencion',      label: 'Retención IA', icon: '🔄', roles: ['director','admin','caja'] },
   { to: '/atraccion',      label: 'Atracción IA', icon: '🚀', roles: ['director','admin'] },
   { to: '/registro-movil', label: 'Registrar Viaje', icon: '🚛', roles: ['director','admin','logistica','monitoreo'] },
   { to: '/movil',          label: 'Modo Móvil',      icon: '📱', roles: ['director','admin','logistica','monitoreo'] },
@@ -27,8 +23,6 @@ const NAV = [
   { to: '/flotilla',      label: 'Tarjetas y TAGs', icon: '💳', roles: ['director','admin','logistica','monitoreo','caja'] },
 
   // ── Comercial / Cobranza ──────────────────────────
-  { to: '/leads',        label: 'Leads (Cotizador)', icon: '🎯', roles: ['director','admin','caja'] },
-  { to: '/broker',       label: 'Broker',       icon: '🤝', roles: ['director','admin'] },
   { to: '/clientes',     label: 'Clientes',     icon: '👥', roles: ['director','admin','caja'] },
   { to: '/cotizaciones', label: 'Cotizaciones', icon: '📄', roles: ['director','admin','caja'] },
   { to: '/cxc',          label: 'Por Cobrar',   icon: '💳', roles: ['director','admin','caja'] },

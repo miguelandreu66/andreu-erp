@@ -22,16 +22,16 @@ import Operadores from './pages/Operadores';
 import Movil from './pages/Movil';
 import Flotilla from './pages/Flotilla';
 import CotizadorPublico from './pages/CotizadorPublico';
-import Leads from './pages/Leads';
-import Broker from './pages/Broker';
 import AuditorIA from './pages/AuditorIA';
-import VendedorIA from './pages/VendedorIA';
 import Fiscal from './pages/Fiscal';
-import AsignadorIA from './pages/AsignadorIA';
-import RetencionIA from './pages/RetencionIA';
-import AtraccionIA from './pages/AtraccionIA';
 import Layout from './components/Layout';
 import './App.css';
+
+// ════════════════════════════════════════════════════════════════
+// Andreu Logistics — Sistema de operación de flota propia
+// El módulo broker (Vendedor IA, Asignador IA, Retención IA, Atracción IA,
+// Broker, Filtro transportistas) se separó al sistema independiente VIVO.
+// ════════════════════════════════════════════════════════════════
 
 const PrivateRoute = ({ children, roles, allowOperador = false }) => {
   const { usuario, loading } = useAuth();
@@ -56,8 +56,6 @@ export default function App() {
             <Route path="unidades" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Unidades /></PrivateRoute>} />
             <Route path="operadores" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Operadores /></PrivateRoute>} />
             <Route path="flotilla" element={<PrivateRoute roles={['director','admin','logistica','monitoreo','caja']}><Flotilla /></PrivateRoute>} />
-            <Route path="leads" element={<PrivateRoute roles={['director','admin','caja']}><Leads /></PrivateRoute>} />
-            <Route path="broker" element={<PrivateRoute roles={['director','admin']}><Broker /></PrivateRoute>} />
             <Route path="flota" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Flota /></PrivateRoute>} />
             <Route path="gastos" element={<PrivateRoute roles={['director','admin','caja','logistica']}><Gastos /></PrivateRoute>} />
             <Route path="nomina" element={<PrivateRoute roles={['director','admin']}><Nomina /></PrivateRoute>} />
@@ -67,11 +65,7 @@ export default function App() {
             <Route path="logistica" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><Logistica /></PrivateRoute>} />
             <Route path="command-ai" element={<PrivateRoute roles={['director','admin','logistica','monitoreo']}><CommandAI /></PrivateRoute>} />
             <Route path="auditor"     element={<PrivateRoute roles={['director']}><AuditorIA /></PrivateRoute>} />
-            <Route path="vendedor-ia" element={<PrivateRoute roles={['director','admin','caja']}><VendedorIA /></PrivateRoute>} />
             <Route path="fiscal"      element={<PrivateRoute roles={['director','admin','caja']}><Fiscal /></PrivateRoute>} />
-            <Route path="asignador"   element={<PrivateRoute roles={['director','admin','logistica']}><AsignadorIA /></PrivateRoute>} />
-            <Route path="retencion"   element={<PrivateRoute roles={['director','admin','caja']}><RetencionIA /></PrivateRoute>} />
-            <Route path="atraccion"   element={<PrivateRoute roles={['director','admin']}><AtraccionIA /></PrivateRoute>} />
             <Route path="historicos" element={<PrivateRoute roles={['director','admin','monitoreo']}><Historicos /></PrivateRoute>} />
             <Route path="mantenimiento" element={<PrivateRoute roles={['director','admin','logistica']}><Mantenimiento /></PrivateRoute>} />
             <Route path="cotizaciones" element={<PrivateRoute roles={['director','admin','caja']}><Cotizaciones /></PrivateRoute>} />

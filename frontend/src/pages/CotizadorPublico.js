@@ -20,6 +20,13 @@ const RECURRENCIAS = [
   { v: 'anual',      l: 'Contrato anual ≥ 50 viajes (15% desc.)' },
 ];
 
+const TIERS_VIVO = [
+  { v: 'CRITICAL', l: 'Critical', emoji: '🚨', desc: 'Recogemos en 1h · entregamos en 4-6h', mult: '3x', color: '#DC2626', garantia: '100% reembolso si fallamos' },
+  { v: 'EXPRESS',  l: 'Express',  emoji: '⚡', desc: 'Mismo día garantizado · recogemos en 2h', mult: '2x', color: '#F59E0B', garantia: '50% reembolso si fallamos' },
+  { v: 'URGENT',   l: 'Urgent',   emoji: '🔥', desc: 'Mañana antes de 8am · recogemos en 4h',  mult: '1.5x', color: '#3B82F6', garantia: '20% descuento próximo viaje' },
+  { v: 'NORMAL',   l: 'Normal',   emoji: '🚚', desc: 'Sin urgencia (no es nuestro fuerte)',     mult: '1x', color: '#6B7280', garantia: 'Sin garantía de tiempo' },
+];
+
 export default function CotizadorPublico() {
   const [form, setForm] = useState({
     contacto_nombre: '', empresa: '', email: '', telefono: '',
@@ -29,6 +36,7 @@ export default function CotizadorPublico() {
     recurrencia: 'unico',
     servicios_extras: [],
     comentarios: '',
+    tier_codigo: 'EXPRESS',  // Default a Express (mismo día)
   });
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState(null);
