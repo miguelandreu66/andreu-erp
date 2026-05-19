@@ -36,6 +36,7 @@ const NAV = [
   { to: '/historicos', label: 'Tendencias', icon: '📈', roles: ['director','admin','monitoreo'] },
   { to: '/reportes',   label: 'Reportes',   icon: '📑', roles: ['director','admin','monitoreo'] },
 
+  { to: '/costos-ia',     label: 'Costos IA',     icon: '💸', roles: ['director','admin'] },
   { to: '/configuracion', label: 'Configuración', icon: '⚙️', roles: ['director','admin'] },
 ];
 
