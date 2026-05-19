@@ -185,4 +185,120 @@ router.get('/reporte-dia', auth(), async (req, res) => {
   res.json({ texto: txt });
 });
 
+// Dashboard operativo consolidado: KPIs de flota propia con ventana móvil
+// Una llamada, todos los datos para la página /operativo
+router.get('/operativo', auth(['director','admin','caja','logistica','monitoreo']), async (req, res) => {
+  const dias = Math.max(1, Math.min(parseInt(req.query.dias || '30', 10), 365));
+  try {
+    // ── KPIs principales ──
+    const { rows: [kpis] } = await db.query(`
+      WITH ventas_periodo AS (
+        SELECT COALESCE(SUM(COALESCE(total, monto)), 0)::float AS ingresos,
+               COUNT(*)::int AS facturas_emitidas,
+               COALESCE(AVG(COALESCE(total, monto)), 0)::float AS ticket_promedio
+        FROM ventas
+        WHERE fecha >= CURRENT_DATE - ($1::int || ' days')::interval
+      ),
+      gastos_periodo AS (
+        SELECT COALESCE(SUM(monto), 0)::float AS gastos_total
+        FROM gastos
+        WHERE fecha >= CURRENT_DATE - ($1::int || ' days')::interval
+          AND estado_aprobacion != 'rechazado'
+      ),
+      viajes_periodo AS (
+        SELECT COUNT(*)::int AS viajes_total,
+               COUNT(*) FILTER (WHERE estado = 'Completado')::int AS viajes_completados
+        FROM viajes
+        WHERE fecha >= CURRENT_DATE - ($1::int || ' days')::interval
+      ),
+      cxc_data AS (
+        SELECT COALESCE(SUM(COALESCE(v.total, v.monto) - COALESCE(ab.ya_abonado, 0)), 0)::float AS por_cobrar
+        FROM ventas v
+        LEFT JOIN (
+          SELECT venta_id, SUM(monto) AS ya_abonado FROM abonos GROUP BY venta_id
+        ) ab ON ab.venta_id = v.id
+        WHERE v.tipo_venta = 'credito' AND COALESCE(v.estado_pago, 'pendiente') != 'pagado'
+      )
+      SELECT
+        vp.ingresos, vp.facturas_emitidas, vp.ticket_promedio,
+        gp.gastos_total,
+        (vp.ingresos - gp.gastos_total)::float AS margen_bruto,
+        vip.viajes_total, vip.viajes_completados,
+        cxc.por_cobrar
+      FROM ventas_periodo vp, gastos_periodo gp, viajes_periodo vip, cxc_data cxc
+    `, [dias]);
+
+    // ── Serie diaria de ingresos vs gastos ──
+    const { rows: serie } = await db.query(`
+      WITH dias AS (
+        SELECT generate_series(
+          (CURRENT_DATE - ($1::int || ' days')::interval)::date,
+          CURRENT_DATE,
+          INTERVAL '1 day'
+        )::date AS fecha
+      )
+      SELECT
+        d.fecha::text AS fecha,
+        COALESCE((SELECT SUM(COALESCE(total, monto))
+                  FROM ventas WHERE fecha = d.fecha), 0)::float AS ingresos,
+        COALESCE((SELECT SUM(monto)
+                  FROM gastos WHERE fecha = d.fecha AND estado_aprobacion != 'rechazado'), 0)::float AS gastos,
+        COALESCE((SELECT COUNT(*) FROM viajes WHERE fecha = d.fecha AND estado = 'Completado'), 0)::int AS viajes
+      FROM dias d
+      ORDER BY d.fecha ASC
+    `, [dias]);
+
+    // ── Top operadores por viajes completados ──
+    let topOperadores = [];
+    try {
+      const { rows } = await db.query(`
+        SELECT
+          o.id,
+          o.nombre,
+          COUNT(v.id)::int AS viajes_total,
+          COUNT(v.id) FILTER (WHERE v.estado = 'Completado')::int AS viajes_completados,
+          COALESCE(AVG(NULLIF(v.kilometros, 0)), 0)::float AS km_promedio
+        FROM operadores o
+        LEFT JOIN viajes v ON v.operador_id = o.id
+          AND v.fecha >= CURRENT_DATE - ($1::int || ' days')::interval
+        WHERE o.activo = true OR o.activo IS NULL
+        GROUP BY o.id, o.nombre
+        HAVING COUNT(v.id) > 0
+        ORDER BY viajes_completados DESC, viajes_total DESC
+        LIMIT 5
+      `, [dias]);
+      topOperadores = rows;
+    } catch { /* schema variante en operadores, ignora */ }
+
+    // ── Gastos por categoría ──
+    let gastosCategorias = [];
+    try {
+      const { rows } = await db.query(`
+        SELECT
+          COALESCE(tipo, categoria, 'otros') AS categoria,
+          COUNT(*)::int AS cantidad,
+          COALESCE(SUM(monto), 0)::float AS total
+        FROM gastos
+        WHERE fecha >= CURRENT_DATE - ($1::int || ' days')::interval
+          AND estado_aprobacion != 'rechazado'
+        GROUP BY 1
+        ORDER BY total DESC
+        LIMIT 8
+      `, [dias]);
+      gastosCategorias = rows;
+    } catch { /* schema variante, ignora */ }
+
+    res.json({
+      dias_ventana: dias,
+      kpis,
+      serie_diaria: serie,
+      top_operadores: topOperadores,
+      gastos_categorias: gastosCategorias,
+    });
+  } catch (e) {
+    console.error('dashboard/operativo:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;

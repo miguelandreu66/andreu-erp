@@ -60,6 +60,7 @@ export const api = {
 
   // Dashboard
   dashboard: () => req('GET', '/dashboard'),
+  dashboardOperativo: (dias = 30) => req('GET', `/dashboard/operativo?dias=${dias}`),
   reporteDia: (fecha) => req('GET', `/dashboard/reporte-dia${fecha ? '?fecha='+fecha : ''}`),
 
   // Ventas

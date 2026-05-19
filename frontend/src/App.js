@@ -28,6 +28,7 @@ import AuditorIA from './pages/AuditorIA';
 import Fiscal from './pages/Fiscal';
 import AgentesIA from './pages/AgentesIA';
 import CostosIA from './pages/CostosIA';
+import Operativo from './pages/Operativo';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -77,6 +78,7 @@ export default function App() {
             <Route path="agentes"     element={<PrivateRoute roles={['director','admin','caja','logistica']}><AgentesIA /></PrivateRoute>} />
             <Route path="agentes/:nombre" element={<PrivateRoute roles={['director','admin','caja','logistica']}><AgentesIA /></PrivateRoute>} />
             <Route path="costos-ia" element={<PrivateRoute roles={['director','admin']}><CostosIA /></PrivateRoute>} />
+            <Route path="operativo" element={<PrivateRoute roles={['director','admin','caja','logistica','monitoreo']}><Operativo /></PrivateRoute>} />
             <Route path="historicos" element={<PrivateRoute roles={['director','admin','monitoreo']}><Historicos /></PrivateRoute>} />
             <Route path="mantenimiento" element={<PrivateRoute roles={['director','admin','logistica']}><Mantenimiento /></PrivateRoute>} />
             <Route path="cotizaciones" element={<PrivateRoute roles={['director','admin','caja']}><Cotizaciones /></PrivateRoute>} />
