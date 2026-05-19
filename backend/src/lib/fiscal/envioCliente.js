@@ -1,10 +1,9 @@
 // ════════════════════════════════════════════════════════════════
-// Envío automático de CFDI al cliente (email + WhatsApp)
+// Envío automático de CFDI al cliente (email — Andreu Logistics)
 // ════════════════════════════════════════════════════════════════
 
 const db = require('../../db');
 const mail = require('../canales/email');
-const wa = require('../canales/whatsapp');
 
 function plantillaEmailCfdi({ cliente_nombre, folio_completo, uuid, monto_total, ruta, fecha_emision, link_pdf, link_xml }) {
   const fmt$ = n => '$' + parseFloat(n).toLocaleString('es-MX', { minimumFractionDigits: 2 });
@@ -126,28 +125,13 @@ async function enviarCfdiACliente(cfdiId) {
     }
   }
 
-  // WhatsApp
-  if (canales.includes('whatsapp') && cfdi.cliente_telefono) {
-    try {
-      if (!(await wa.isAvailable())) {
-        resultados.whatsapp = { ok: false, motivo: 'twilio_no_disponible' };
-      } else {
-        const tel = wa.normalizarTelefono(cfdi.cliente_telefono);
-        const body = `📄 *Factura Andreu Logistics*\n\nFolio: *${folioCompleto}*\nUUID: ${cfdi.uuid_fiscal}\nTotal: *$${parseFloat(cfdi.total).toLocaleString('es-MX')}*\n\nDescarga:\n📄 PDF: ${linkPdf}\n📋 XML: ${linkXml}\n\n¡Gracias por preferirnos! 🚚`;
-        const r = await wa.enviar({ to: tel, body });
-        resultados.whatsapp = { ok: true, id_externo: r.id_externo };
-      }
-    } catch (e) {
-      resultados.whatsapp = { ok: false, error: e.message };
-    }
-  }
+  // Nota: WhatsApp se removió en separación VIVO. Andreu Logistics solo usa email.
 
   // Actualizar registro
-  const exito = (resultados.email?.ok || resultados.whatsapp?.ok);
+  const exito = resultados.email?.ok;
   if (exito) {
     const canalesExito = [];
     if (resultados.email?.ok) canalesExito.push('email');
-    if (resultados.whatsapp?.ok) canalesExito.push('whatsapp');
     await db.query(`
       UPDATE cfdi_emitidos
       SET enviado_cliente = true,

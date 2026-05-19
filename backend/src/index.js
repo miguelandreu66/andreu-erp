@@ -6,7 +6,13 @@ const app = express();
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
 app.use(express.json());
 
-// Routes
+// ════════════════════════════════════════════════════════════════
+// Andreu Logistics — Sistema de operación de flota propia
+// El módulo broker (Vendedor IA, Asignador IA, Retención IA, Atracción IA,
+// Broker, Filtro transportistas) se separó al sistema independiente VIVO.
+// ════════════════════════════════════════════════════════════════
+
+// Routes — operación propia
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/ventas', require('./routes/ventas'));
 app.use('/api/viajes', require('./routes/viajes'));
@@ -31,23 +37,13 @@ app.use('/api',               require('./routes/unidadDocumentos'));
 app.use('/api/operadores',    require('./routes/operadorDocumentos'));
 app.use('/api/reportes-pdf',  require('./routes/reportesPdf'));
 app.use('/api/flotilla',      require('./routes/flotillaTarjetas'));
-app.use('/api/leads',         require('./routes/leads'));
-// Docs montado ANTES para que /config y /:id/documentos no choquen con /:id de transportistas
-app.use('/api/transportistas', require('./routes/transportistaDocumentos'));
-app.use('/api/transportistas', require('./routes/transportistas'));
-app.use('/api/broker-finanzas', require('./routes/brokerFinanzas'));
-app.use('/api/auditor-ia',     require('./routes/auditorIA'));
-app.use('/api/canales',        require('./routes/canales'));         // webhooks públicos
-app.use('/api/vendedor-ia',    require('./routes/vendedorIA'));      // admin
-app.use('/api/cfdi',           require('./routes/cfdi'));            // CFDI + Carta Porte
-app.use('/api/asignador-ia',   require('./routes/asignadorIA'));     // Asignador inteligente
-app.use('/api/retencion-ia',   require('./routes/retencionIA'));     // Retención autopilot
-app.use('/api/atraccion-ia',   require('./routes/atraccionIA'));     // Atracción autónoma (Fase 20)
+app.use('/api/auditor-ia',    require('./routes/auditorIA'));
+app.use('/api/cfdi',          require('./routes/cfdi'));            // CFDI + Carta Porte
 
-app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Andreu ERP' }));
+app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Andreu Logistics' }));
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-  console.log(`Andreu ERP Backend corriendo en puerto ${PORT}`);
+  console.log(`Andreu Logistics Backend corriendo en puerto ${PORT}`);
   require('./lib/cronJobs').iniciar();
 });
