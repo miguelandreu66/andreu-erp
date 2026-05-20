@@ -13,6 +13,10 @@ backend/.env
 # Build del frontend
 frontend/build/
 
+# Backups locales (NUNCA commitear datos)
+backups/
+*.json.gz
+
 # Logs
 *.log
 npm-debug.log*
